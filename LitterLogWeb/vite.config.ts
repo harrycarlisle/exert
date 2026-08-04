@@ -9,8 +9,7 @@ import { VitePWA } from 'vite-plugin-pwa'
  * Local `vite` / `vite preview` default to `/` unless BASE_PATH is set.
  */
 export default defineConfig(({ command }) => {
-  const base =
-    process.env.BASE_PATH || (command === 'build' ? '/exert/' : '/')
+  const base = process.env.BASE_PATH || (command === 'build' ? '/exert/' : '/')
   const normalizedBase = base.endsWith('/') ? base : `${base}/`
   const appPath = normalizedBase === './' ? '/' : normalizedBase
 

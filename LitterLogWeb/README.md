@@ -10,12 +10,12 @@ Private, installable Progressive Web App for one-tap cat bathroom logging — **
 
 ## How it relates to the native project
 
-| | Native (`LitterLog/`) | Web (`LitterLogWeb/`) |
-|--|--|--|
-| Platform | SwiftUI / WidgetKit iOS app | React + Vite PWA |
-| Storage | App Group JSON | IndexedDB on device |
-| Widget | Interactive Home Screen widget | **Not available** |
-| Install | Xcode / TestFlight / App Store | Safari → Add to Home Screen |
+|          | Native (`LitterLog/`)          | Web (`LitterLogWeb/`)       |
+| -------- | ------------------------------ | --------------------------- |
+| Platform | SwiftUI / WidgetKit iOS app    | React + Vite PWA            |
+| Storage  | App Group JSON                 | IndexedDB on device         |
+| Widget   | Interactive Home Screen widget | **Not available**           |
+| Install  | Xcode / TestFlight / App Store | Safari → Add to Home Screen |
 
 The native project is unchanged by web deployment work.
 
@@ -29,14 +29,14 @@ The native project is unchanged by web deployment work.
 
 ## Deployment (GitHub Pages)
 
-| Item | Value |
-|------|--------|
-| Live URL | https://harrycarlisle.github.io/exert/ |
-| Method | GitHub Actions → GitHub Pages |
-| Workflow | `.github/workflows/deploy-litter-log-web.yml` |
-| Branch | `main` |
-| Vite base | `/exert/` |
-| Artifact | `LitterLogWeb/dist` |
+| Item      | Value                                         |
+| --------- | --------------------------------------------- |
+| Live URL  | https://harrycarlisle.github.io/exert/        |
+| Method    | GitHub Actions → GitHub Pages                 |
+| Workflow  | `.github/workflows/deploy-litter-log-web.yml` |
+| Branch    | `main`                                        |
+| Vite base | `/exert/`                                     |
+| Artifact  | `LitterLogWeb/dist`                           |
 
 ### Required repository setting
 
