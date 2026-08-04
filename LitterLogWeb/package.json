@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:pages": "tsc -b && BASE_PATH=/exert/ vite build",
     "preview": "vite preview",
+    "preview:pages": "npm run build:pages && node scripts/preview-pages.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",

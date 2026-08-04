@@ -2,7 +2,7 @@ name: Deploy Litter Log Web
 
 on:
   push:
-    branches: [main, cursor/litter-log-web-pwa-1b62]
+    branches: [main]
     paths:
       - 'LitterLogWeb/**'
       - '.github/workflows/deploy-litter-log-web.yml'
@@ -24,21 +24,61 @@ jobs:
       run:
         working-directory: LitterLogWeb
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: LitterLogWeb/package-lock.json
-      - run: npm ci
-      - run: npm run build
-        env:
-          # Project Pages are served under /<repo>/
-          BASE_PATH: /exert/
-      - name: Ensure no Jekyll processing
-        run: touch dist/.nojekyll
-      - uses: actions/upload-pages-artifact@v3
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build for GitHub Pages
+        run: npm run build:pages
+
+      - name: Prepare Pages static files
+        run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+          echo "Built index.html asset refs:"
+          grep -E 'src=|href=' dist/index.html
+          echo "Manifest:"
+          cat dist/manifest.webmanifest
+          test -f dist/sw.js
+          test -f dist/icons/icon-192.png
+          test -f dist/icons/icon-512.png
+          test -f dist/apple-touch-icon.png
+          # Fail if any root-absolute asset paths (missing /exert/) remain in HTML.
+          if grep -E ' (src|href)="/(assets|icons|manifest|sw|favicon|apple)' dist/index.html; then
+            echo "Found root-absolute asset paths that will break /exert/ hosting" >&2
+            exit 1
+          fi
+          # Fail if SW still binds navigation to root /index.html
+          if grep -q 'createHandlerBoundToURL("/index.html")' dist/sw.js; then
+            echo "Service worker navigateFallback is root /index.html; expected /exert/index.html" >&2
+            exit 1
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
+          # Path is relative to the repository root (not working-directory).
           path: LitterLogWeb/dist
 
   deploy:
@@ -48,5 +88,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4

@@ -15,7 +15,11 @@ Private one-tap litter tracking for cat urinary monitoring.
 
 - Path: [`LitterLogWeb/`](LitterLogWeb/)
 - Docs: [`LitterLogWeb/README.md`](LitterLogWeb/README.md)
+- Live URL: **https://harrycarlisle.github.io/exert/**
+- Deployed via GitHub Actions (`.github/workflows/deploy-litter-log-web.yml`)
 - Install from Safari → Add to Home Screen
 - Local-only IndexedDB storage; no backend
+
+**Pages setting required once:** Settings → Pages → Source → **GitHub Actions**
 
 The native and web apps are separate. Prefer the web PWA if you need to use Litter Log on an iPhone immediately without Xcode.
