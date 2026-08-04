@@ -1,0 +1,647 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0232F97ABE0810535E642F09 /* LitterLogPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4ED72EDF8264DE36060AF0B /* LitterLogPalette.swift */; };
+		03141B2245E1EFA042BD4C1C /* CSVExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00D071EA6B6A958EE4691900 /* CSVExporterTests.swift */; };
+		079FC9B4EBBCD0643740DF42 /* SafetyNoticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9F0BFA78E435C5CD285C35 /* SafetyNoticeView.swift */; };
+		0AF2DC528BAC6C31BC80784A /* TodaySummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B907397F4FEED98743FD83C8 /* TodaySummary.swift */; };
+		0E62FEC0DC3D3A3B9ACC61A3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 34A07BC21DFE868A6CE78963 /* Assets.xcassets */; };
+		0FA3DE83223172E994091CEB /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B6622EA9C9BFEB194B59312 /* SampleData.swift */; };
+		124C98DCBD3409ACEE310F62 /* SharedStoreError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33C062156D97CA7D42E77019 /* SharedStoreError.swift */; };
+		1387C59E939B26B972B67523 /* LitterLogWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E22FE2AD612E1576CC542DE0 /* LitterLogWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		15FEA73159B9DED45F6C4CF5 /* SafetyNoticePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BCBA86057C6E6CB0661FE95 /* SafetyNoticePolicyTests.swift */; };
+		1754B1738951F76BE4A35A30 /* CSVExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A9CCF36971B54277E1CEC37 /* CSVExporter.swift */; };
+		22CBB8B2971D3BF437D77518 /* AppGroupConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4060C539FAC464EBB6B395D8 /* AppGroupConfiguration.swift */; };
+		2660AF3550454C06F22DBB3A /* TodaySummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B4C53A60D3D20793E05AE74 /* TodaySummaryTests.swift */; };
+		2B33795D49EED3DCEDA2959A /* SharedEventStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7B1CA37ED030EC7C370B018 /* SharedEventStoreTests.swift */; };
+		2F9E7A20A9941502B3EC93C9 /* LitterLogPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4ED72EDF8264DE36060AF0B /* LitterLogPalette.swift */; };
+		33D26493285CFE4DA90B866F /* LogBathroomEventIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76B3DEBADFD9B2446F474C31 /* LogBathroomEventIntent.swift */; };
+		3844050240B4EBCF96A9C5AA /* DateGroupingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 928840B539E2486417005A2F /* DateGroupingTests.swift */; };
+		46CF65A46D0B5A55E84175A0 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F5918E24ADAA7728F403C65 /* AppModel.swift */; };
+		47B514A28981BFC2A87EE609 /* BathroomEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC94EEE485E3B70C92EA2F6F /* BathroomEvent.swift */; };
+		4DBD02F5C68DB51CE434FBC8 /* CSVExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A9CCF36971B54277E1CEC37 /* CSVExporter.swift */; };
+		502FFBF161B67C4D1CE8915F /* SampleData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B6622EA9C9BFEB194B59312 /* SampleData.swift */; };
+		55C17F8CD0524E5DB9A34D4B /* SafetyNoticePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568F279FCBC1B97AFE9BA929 /* SafetyNoticePolicy.swift */; };
+		7396FC6EC28DE78ABA40607A /* AppGroupConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4060C539FAC464EBB6B395D8 /* AppGroupConfiguration.swift */; };
+		74A724EB37B4F6D1868D6F95 /* RecentEventRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D793E34A51BB6F5853E4CB05 /* RecentEventRow.swift */; };
+		76AB4578482AD6FB60F60AF9 /* LogEventButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37454A585BD8803096EC160A /* LogEventButton.swift */; };
+		7BE5879696888F01B57F37BC /* TodaySummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B907397F4FEED98743FD83C8 /* TodaySummary.swift */; };
+		7F2760AE69DF1999D2152A83 /* EventStorePayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3736C97B8132067691B1243F /* EventStorePayload.swift */; };
+		8096A56A6B3A836D679D1317 /* DateGrouping.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60DA4AA4700B24B0EE42D4F /* DateGrouping.swift */; };
+		88702F65E576F30A15FA86F2 /* SharedStoreError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33C062156D97CA7D42E77019 /* SharedStoreError.swift */; };
+		89A87DA4A6A5D27E61947604 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AC0C6CC7B77A2B2FDB0F8E7 /* HistoryView.swift */; };
+		89AE741345FEA02465234B09 /* BathroomEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC94EEE485E3B70C92EA2F6F /* BathroomEvent.swift */; };
+		9B9A4746FF2FF9F11273F479 /* LitterLogWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55FC126632D3EF1757AEC9C9 /* LitterLogWidgetBundle.swift */; };
+		9CCC71C25672CAFED753122C /* BathroomEventType.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C5556F586EE9829FA82C81 /* BathroomEventType.swift */; };
+		A03091EFDFD149CFA3F2E759 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33B9F387D11795196A64997D /* SettingsView.swift */; };
+		A034F36C2D422BEAD2EABBD4 /* ExportSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C19F0DFE5B973BEE4C3BEF6 /* ExportSheetView.swift */; };
+		A22724097644B8C42F5EB8CB /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 745B83253931A16BE2B4BC50 /* AppSettings.swift */; };
+		A87F879735E67E23AA65FD02 /* EventSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964C8CE62D357B7D25D5FDD1 /* EventSource.swift */; };
+		B0452FC874215F88F76492DE /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 745B83253931A16BE2B4BC50 /* AppSettings.swift */; };
+		B7C6BFB03AE144301ABA10E0 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD5F8056B463147C8DAFFC77 /* HomeView.swift */; };
+		B9C281A004FE9873AD42B8EA /* EventEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2556BA89353BA07500965FFE /* EventEditorView.swift */; };
+		C0C17C074E74FEC6ABB9CEE2 /* DateGrouping.swift in Sources */ = {isa = PBXBuildFile; fileRef = E60DA4AA4700B24B0EE42D4F /* DateGrouping.swift */; };
+		C482FB0D461560A15BE231D9 /* SafetyNoticePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568F279FCBC1B97AFE9BA929 /* SafetyNoticePolicy.swift */; };
+		CA886B801455A49196C798B5 /* SharedEventStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FC1B929817FABBD6EF013E2 /* SharedEventStore.swift */; };
+		CE09C2871C5E99A27DAA9B23 /* EventStorePayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3736C97B8132067691B1243F /* EventStorePayload.swift */; };
+		D3403F88821E60661C163690 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 412513FCF42BF4D66860FBC5 /* Assets.xcassets */; };
+		D8FA2E21FA5088AE610C082D /* BathroomEventType.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2C5556F586EE9829FA82C81 /* BathroomEventType.swift */; };
+		DAAE358E0F0EF17D560FBC25 /* EventSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964C8CE62D357B7D25D5FDD1 /* EventSource.swift */; };
+		DE641A051D59C3D3501E31CA /* SharedEventStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FC1B929817FABBD6EF013E2 /* SharedEventStore.swift */; };
+		E8EF6DEE5CD6BF9A8FA39AC4 /* LogBathroomEventIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76B3DEBADFD9B2446F474C31 /* LogBathroomEventIntent.swift */; };
+		F31BD84E22AEDD4B127E060F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 024EA09FD2B22CBDCEF3BBBF /* PrivacyInfo.xcprivacy */; };
+		F6FC81FD36B1EFECF7BA7AAC /* LitterLogWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C1FF1050B4EB5C1A148FE61 /* LitterLogWidget.swift */; };
+		F9D8B8D9F84B206938E2044C /* LitterLogApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF0255E63873E0E62BCC02E5 /* LitterLogApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2C8D3243AF984244EFB13A65 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E2D2782E000B7A59E6294F90 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2A39757EFB74F79DB5CD792B;
+			remoteInfo = LitterLog;
+		};
+		99E6A51DA0B86FE48AEB34ED /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E2D2782E000B7A59E6294F90 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 53BD1581C08911EE3122DB3B;
+			remoteInfo = LitterLogWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		0B45A4956EB4086F3AB39308 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				1387C59E939B26B972B67523 /* LitterLogWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		00D071EA6B6A958EE4691900 /* CSVExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CSVExporterTests.swift; path = LitterLogTests/CSVExporterTests.swift; sourceTree = "<group>"; };
+		024EA09FD2B22CBDCEF3BBBF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = LitterLog/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		0B4C53A60D3D20793E05AE74 /* TodaySummaryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodaySummaryTests.swift; path = LitterLogTests/TodaySummaryTests.swift; sourceTree = "<group>"; };
+		0FC4D7CB1F5273D581A9DA8A /* LitterLog.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = LitterLog.entitlements; path = LitterLog/LitterLog.entitlements; sourceTree = "<group>"; };
+		1A9CCF36971B54277E1CEC37 /* CSVExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CSVExporter.swift; path = LitterLogShared/Export/CSVExporter.swift; sourceTree = "<group>"; };
+		1D9F0BFA78E435C5CD285C35 /* SafetyNoticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SafetyNoticeView.swift; path = LitterLog/SharedUI/SafetyNoticeView.swift; sourceTree = "<group>"; };
+		23004EDBC35616A13A54F69E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = LitterLogWidget/Info.plist; sourceTree = "<group>"; };
+		2556BA89353BA07500965FFE /* EventEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EventEditorView.swift; path = LitterLog/Features/History/EventEditorView.swift; sourceTree = "<group>"; };
+		3023206DDAEEDB1CC314C486 /* LitterLogWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = LitterLogWidget.entitlements; path = LitterLogWidget/LitterLogWidget.entitlements; sourceTree = "<group>"; };
+		33B9F387D11795196A64997D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsView.swift; path = LitterLog/Features/Settings/SettingsView.swift; sourceTree = "<group>"; };
+		33C062156D97CA7D42E77019 /* SharedStoreError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SharedStoreError.swift; path = LitterLogShared/Persistence/SharedStoreError.swift; sourceTree = "<group>"; };
+		34A07BC21DFE868A6CE78963 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = LitterLogWidget/Assets.xcassets; sourceTree = "<group>"; };
+		3736C97B8132067691B1243F /* EventStorePayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EventStorePayload.swift; path = LitterLogShared/Persistence/EventStorePayload.swift; sourceTree = "<group>"; };
+		37454A585BD8803096EC160A /* LogEventButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogEventButton.swift; path = LitterLog/SharedUI/LogEventButton.swift; sourceTree = "<group>"; };
+		3B6622EA9C9BFEB194B59312 /* SampleData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SampleData.swift; path = LitterLogShared/Utilities/SampleData.swift; sourceTree = "<group>"; };
+		3BCBA86057C6E6CB0661FE95 /* SafetyNoticePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SafetyNoticePolicyTests.swift; path = LitterLogTests/SafetyNoticePolicyTests.swift; sourceTree = "<group>"; };
+		3BF49C896D584F0DA0C4AAD2 /* LitterLogTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LitterLogTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4060C539FAC464EBB6B395D8 /* AppGroupConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppGroupConfiguration.swift; path = LitterLogShared/Utilities/AppGroupConfiguration.swift; sourceTree = "<group>"; };
+		412513FCF42BF4D66860FBC5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = LitterLog/Assets.xcassets; sourceTree = "<group>"; };
+		44A8A3B647591BB00DC27379 /* LitterLog.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LitterLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4AC0C6CC7B77A2B2FDB0F8E7 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = LitterLog/Features/History/HistoryView.swift; sourceTree = "<group>"; };
+		55FC126632D3EF1757AEC9C9 /* LitterLogWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LitterLogWidgetBundle.swift; path = LitterLogWidget/LitterLogWidgetBundle.swift; sourceTree = "<group>"; };
+		568F279FCBC1B97AFE9BA929 /* SafetyNoticePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SafetyNoticePolicy.swift; path = LitterLogShared/Utilities/SafetyNoticePolicy.swift; sourceTree = "<group>"; };
+		641796D19700E31C86F5E282 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = LitterLog/Info.plist; sourceTree = "<group>"; };
+		745B83253931A16BE2B4BC50 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppSettings.swift; path = LitterLogShared/Models/AppSettings.swift; sourceTree = "<group>"; };
+		76B3DEBADFD9B2446F474C31 /* LogBathroomEventIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LogBathroomEventIntent.swift; path = LitterLogShared/Intents/LogBathroomEventIntent.swift; sourceTree = "<group>"; };
+		7C19F0DFE5B973BEE4C3BEF6 /* ExportSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExportSheetView.swift; path = LitterLog/Export/ExportSheetView.swift; sourceTree = "<group>"; };
+		8C1FF1050B4EB5C1A148FE61 /* LitterLogWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LitterLogWidget.swift; path = LitterLogWidget/LitterLogWidget.swift; sourceTree = "<group>"; };
+		8F5918E24ADAA7728F403C65 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppModel.swift; path = LitterLog/Features/Home/AppModel.swift; sourceTree = "<group>"; };
+		928840B539E2486417005A2F /* DateGroupingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DateGroupingTests.swift; path = LitterLogTests/DateGroupingTests.swift; sourceTree = "<group>"; };
+		964C8CE62D357B7D25D5FDD1 /* EventSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EventSource.swift; path = LitterLogShared/Models/EventSource.swift; sourceTree = "<group>"; };
+		9FC1B929817FABBD6EF013E2 /* SharedEventStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SharedEventStore.swift; path = LitterLogShared/Persistence/SharedEventStore.swift; sourceTree = "<group>"; };
+		B907397F4FEED98743FD83C8 /* TodaySummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TodaySummary.swift; path = LitterLogShared/Models/TodaySummary.swift; sourceTree = "<group>"; };
+		C2C5556F586EE9829FA82C81 /* BathroomEventType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BathroomEventType.swift; path = LitterLogShared/Models/BathroomEventType.swift; sourceTree = "<group>"; };
+		D793E34A51BB6F5853E4CB05 /* RecentEventRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecentEventRow.swift; path = LitterLog/SharedUI/RecentEventRow.swift; sourceTree = "<group>"; };
+		D7B1CA37ED030EC7C370B018 /* SharedEventStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SharedEventStoreTests.swift; path = LitterLogTests/SharedEventStoreTests.swift; sourceTree = "<group>"; };
+		DF0255E63873E0E62BCC02E5 /* LitterLogApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LitterLogApp.swift; path = LitterLog/LitterLogApp.swift; sourceTree = "<group>"; };
+		E22FE2AD612E1576CC542DE0 /* LitterLogWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LitterLogWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E4ED72EDF8264DE36060AF0B /* LitterLogPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LitterLogPalette.swift; path = LitterLogShared/Utilities/LitterLogPalette.swift; sourceTree = "<group>"; };
+		E60DA4AA4700B24B0EE42D4F /* DateGrouping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DateGrouping.swift; path = LitterLogShared/Utilities/DateGrouping.swift; sourceTree = "<group>"; };
+		FC94EEE485E3B70C92EA2F6F /* BathroomEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BathroomEvent.swift; path = LitterLogShared/Models/BathroomEvent.swift; sourceTree = "<group>"; };
+		FD5F8056B463147C8DAFFC77 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = LitterLog/Features/Home/HomeView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9E88FEF503C1E40FDF23CCDE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBF680522761010FEF9A3105 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FB07BBF40CFF77A6CF066D67 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		14AF8C191BF4A2560082154F /* LitterLogTests */ = {
+			isa = PBXGroup;
+			children = (
+				D7B1CA37ED030EC7C370B018,
+				0B4C53A60D3D20793E05AE74,
+				00D071EA6B6A958EE4691900,
+				3BCBA86057C6E6CB0661FE95,
+				928840B539E2486417005A2F,
+			);
+			sourceTree = "<group>";
+		};
+		2F3A6B1E78F896718625FF06 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				44A8A3B647591BB00DC27379,
+				E22FE2AD612E1576CC542DE0,
+				3BF49C896D584F0DA0C4AAD2,
+			);
+			sourceTree = "<group>";
+		};
+		66B86ADD981AADC284E48305 /* LitterLogWidget */ = {
+			isa = PBXGroup;
+			children = (
+				55FC126632D3EF1757AEC9C9,
+				8C1FF1050B4EB5C1A148FE61,
+				34A07BC21DFE868A6CE78963,
+				3023206DDAEEDB1CC314C486,
+				23004EDBC35616A13A54F69E,
+			);
+			sourceTree = "<group>";
+		};
+		7F42A09AD5ED8E981D5DE0BE /* LitterLog */ = {
+			isa = PBXGroup;
+			children = (
+				DF0255E63873E0E62BCC02E5,
+				8F5918E24ADAA7728F403C65,
+				FD5F8056B463147C8DAFFC77,
+				4AC0C6CC7B77A2B2FDB0F8E7,
+				2556BA89353BA07500965FFE,
+				33B9F387D11795196A64997D,
+				37454A585BD8803096EC160A,
+				D793E34A51BB6F5853E4CB05,
+				1D9F0BFA78E435C5CD285C35,
+				7C19F0DFE5B973BEE4C3BEF6,
+				412513FCF42BF4D66860FBC5,
+				0FC4D7CB1F5273D581A9DA8A,
+				641796D19700E31C86F5E282,
+				024EA09FD2B22CBDCEF3BBBF,
+			);
+			sourceTree = "<group>";
+		};
+		A86A4D66F32664847E8C3678 /* LitterLogShared */ = {
+			isa = PBXGroup;
+			children = (
+				FC94EEE485E3B70C92EA2F6F,
+				C2C5556F586EE9829FA82C81,
+				964C8CE62D357B7D25D5FDD1,
+				745B83253931A16BE2B4BC50,
+				B907397F4FEED98743FD83C8,
+				3736C97B8132067691B1243F,
+				9FC1B929817FABBD6EF013E2,
+				33C062156D97CA7D42E77019,
+				1A9CCF36971B54277E1CEC37,
+				76B3DEBADFD9B2446F474C31,
+				4060C539FAC464EBB6B395D8,
+				E60DA4AA4700B24B0EE42D4F,
+				E4ED72EDF8264DE36060AF0B,
+				568F279FCBC1B97AFE9BA929,
+				3B6622EA9C9BFEB194B59312,
+			);
+			sourceTree = "<group>";
+		};
+		BE8FA2D0C91C7059E96E02B9 /* LitterLog */ = {
+			isa = PBXGroup;
+			children = (
+				7F42A09AD5ED8E981D5DE0BE,
+				A86A4D66F32664847E8C3678,
+				66B86ADD981AADC284E48305,
+				14AF8C191BF4A2560082154F,
+				2F3A6B1E78F896718625FF06,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2A39757EFB74F79DB5CD792B /* LitterLog */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D97B77EAD2380603A3F2A82 /* Build configuration list for PBXNativeTarget "LitterLog" */;
+			buildPhases = (
+				2FB286088BD0BF8AE88E0D78 /* Sources */,
+				9E88FEF503C1E40FDF23CCDE /* Frameworks */,
+				B156C1E46BE15DE52AC798A1 /* Resources */,
+				0B45A4956EB4086F3AB39308 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F78D8F997A3DF3A317629BBA /* PBXTargetDependency */,
+			);
+			name = LitterLog;
+			productName = LitterLog;
+			productReference = 44A8A3B647591BB00DC27379 /* LitterLog.app */;
+			productType = "com.apple.product-type.application";
+		};
+		2D58B48C02DE57B8C93BCF2B /* LitterLogTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0F471B4923D46E58DCE40A0E /* Build configuration list for PBXNativeTarget "LitterLogTests" */;
+			buildPhases = (
+				8D64019B5686A4D45D4B893E /* Sources */,
+				FB07BBF40CFF77A6CF066D67 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3A8175B7A6DA50F7E03F8421 /* PBXTargetDependency */,
+			);
+			name = LitterLogTests;
+			productName = LitterLogTests;
+			productReference = 3BF49C896D584F0DA0C4AAD2 /* LitterLogTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		53BD1581C08911EE3122DB3B /* LitterLogWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8B429FCF8E65333911689421 /* Build configuration list for PBXNativeTarget "LitterLogWidget" */;
+			buildPhases = (
+				220C0D6758212FE888A01291 /* Sources */,
+				CBF680522761010FEF9A3105 /* Frameworks */,
+				B2EB01E0E895CE4CFAAEAFC4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LitterLogWidget;
+			productName = LitterLogWidget;
+			productReference = E22FE2AD612E1576CC542DE0 /* LitterLogWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E2D2782E000B7A59E6294F90 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					2A39757EFB74F79DB5CD792B = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					53BD1581C08911EE3122DB3B = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					2D58B48C02DE57B8C93BCF2B = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = 2A39757EFB74F79DB5CD792B;
+					};
+				};
+			};
+			buildConfigurationList = 1F4E3D13C2320EDA50221924 /* Build configuration list for PBXProject "LitterLog" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = BE8FA2D0C91C7059E96E02B9;
+			productRefGroup = 2F3A6B1E78F896718625FF06 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2A39757EFB74F79DB5CD792B /* LitterLog */,
+				53BD1581C08911EE3122DB3B /* LitterLogWidget */,
+				2D58B48C02DE57B8C93BCF2B /* LitterLogTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B156C1E46BE15DE52AC798A1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D3403F88821E60661C163690 /* Assets.xcassets in Resources */,
+				F31BD84E22AEDD4B127E060F /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B2EB01E0E895CE4CFAAEAFC4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0E62FEC0DC3D3A3B9ACC61A3 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		220C0D6758212FE888A01291 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				47B514A28981BFC2A87EE609 /* in Sources */,
+				9CCC71C25672CAFED753122C /* in Sources */,
+				A87F879735E67E23AA65FD02 /* in Sources */,
+				B0452FC874215F88F76492DE /* in Sources */,
+				7BE5879696888F01B57F37BC /* in Sources */,
+				7F2760AE69DF1999D2152A83 /* in Sources */,
+				DE641A051D59C3D3501E31CA /* in Sources */,
+				124C98DCBD3409ACEE310F62 /* in Sources */,
+				1754B1738951F76BE4A35A30 /* in Sources */,
+				33D26493285CFE4DA90B866F /* in Sources */,
+				7396FC6EC28DE78ABA40607A /* in Sources */,
+				8096A56A6B3A836D679D1317 /* in Sources */,
+				0232F97ABE0810535E642F09 /* in Sources */,
+				55C17F8CD0524E5DB9A34D4B /* in Sources */,
+				502FFBF161B67C4D1CE8915F /* in Sources */,
+				9B9A4746FF2FF9F11273F479 /* in Sources */,
+				F6FC81FD36B1EFECF7BA7AAC /* in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		}};
+		2FB286088BD0BF8AE88E0D78 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				89AE741345FEA02465234B09 /* in Sources */,
+				D8FA2E21FA5088AE610C082D /* in Sources */,
+				DAAE358E0F0EF17D560FBC25 /* in Sources */,
+				A22724097644B8C42F5EB8CB /* in Sources */,
+				0AF2DC528BAC6C31BC80784A /* in Sources */,
+				CE09C2871C5E99A27DAA9B23 /* in Sources */,
+				CA886B801455A49196C798B5 /* in Sources */,
+				88702F65E576F30A15FA86F2 /* in Sources */,
+				4DBD02F5C68DB51CE434FBC8 /* in Sources */,
+				E8EF6DEE5CD6BF9A8FA39AC4 /* in Sources */,
+				22CBB8B2971D3BF437D77518 /* in Sources */,
+				C0C17C074E74FEC6ABB9CEE2 /* in Sources */,
+				2F9E7A20A9941502B3EC93C9 /* in Sources */,
+				C482FB0D461560A15BE231D9 /* in Sources */,
+				0FA3DE83223172E994091CEB /* in Sources */,
+				F9D8B8D9F84B206938E2044C /* in Sources */,
+				46CF65A46D0B5A55E84175A0 /* in Sources */,
+				B7C6BFB03AE144301ABA10E0 /* in Sources */,
+				89A87DA4A6A5D27E61947604 /* in Sources */,
+				B9C281A004FE9873AD42B8EA /* in Sources */,
+				A03091EFDFD149CFA3F2E759 /* in Sources */,
+				76AB4578482AD6FB60F60AF9 /* in Sources */,
+				74A724EB37B4F6D1868D6F95 /* in Sources */,
+				079FC9B4EBBCD0643740DF42 /* in Sources */,
+				A034F36C2D422BEAD2EABBD4 /* in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		}};
+		8D64019B5686A4D45D4B893E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2B33795D49EED3DCEDA2959A /* in Sources */,
+				2660AF3550454C06F22DBB3A /* in Sources */,
+				03141B2245E1EFA042BD4C1C /* in Sources */,
+				15FEA73159B9DED45F6C4CF5 /* in Sources */,
+				3844050240B4EBCF96A9C5AA /* in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		}};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3A8175B7A6DA50F7E03F8421 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2A39757EFB74F79DB5CD792B /* LitterLog */;
+			targetProxy = 2C8D3243AF984244EFB13A65 /* PBXContainerItemProxy */;
+		};
+		F78D8F997A3DF3A317629BBA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 53BD1581C08911EE3122DB3B /* LitterLogWidget */;
+			targetProxy = 99E6A51DA0B86FE48AEB34ED /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0DC4A93B97866A7C66FF0056 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = LitterLog/LitterLog.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LitterLog/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", );
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.harrycarlisle.LitterLog;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		19B69E46700831D730A5F9AF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		35D0387E8A36F09B2F1874B0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = ("DEBUG=1", "$(inherited)", );
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		5129F47484156CFE0A2B0B98 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = LitterLog/LitterLog.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LitterLog/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", );
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.harrycarlisle.LitterLog;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		5B136B015B8399181B46D888 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LitterLogWidget/LitterLogWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LitterLogWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.harrycarlisle.LitterLog.Widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		C7F40333FD855AAC6C4CEBE7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = LitterLogWidget/LitterLogWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LitterLogWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks", );
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.harrycarlisle.LitterLog.Widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		D740128B8B59F2FC0125BD3F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.harrycarlisle.LitterLog.Tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LitterLog.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/LitterLog";
+			};
+			name = Release;
+		};
+		FFC59DEE43958AEBE3B7C3EC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.harrycarlisle.LitterLog.Tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LitterLog.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/LitterLog";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0F471B4923D46E58DCE40A0E /* Build configuration list for PBXNativeTarget "LitterLogTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FFC59DEE43958AEBE3B7C3EC /* Debug */,
+				D740128B8B59F2FC0125BD3F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1D97B77EAD2380603A3F2A82 /* Build configuration list for PBXNativeTarget "LitterLog" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5129F47484156CFE0A2B0B98 /* Debug */,
+				0DC4A93B97866A7C66FF0056 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1F4E3D13C2320EDA50221924 /* Build configuration list for PBXProject "LitterLog" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				35D0387E8A36F09B2F1874B0 /* Debug */,
+				19B69E46700831D730A5F9AF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8B429FCF8E65333911689421 /* Build configuration list for PBXNativeTarget "LitterLogWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C7F40333FD855AAC6C4CEBE7 /* Debug */,
+				5B136B015B8399181B46D888 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = E2D2782E000B7A59E6294F90 /* Project object */;
+}

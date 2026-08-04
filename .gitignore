@@ -1,7 +1,45 @@
-.next
-node_modules
-out
-dist
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+timeline.xctimeline
+playground.xcworkspace
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# App Group / temp exports (local)
+*.csv.tmp
+*.corrupt-*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# Node leftovers (removed scaffold)
+node_modules/
+.next/
+out/
+dist/
 .env*
 !.env.example
 *.tsbuildinfo
