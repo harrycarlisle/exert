@@ -35,11 +35,16 @@ Package.resolved
 *.swp
 *~
 
-# Node leftovers (removed scaffold)
+# Web / Node
 node_modules/
 .next/
 out/
 dist/
+.dev-dist/
+coverage/
+playwright-report/
+test-results/
+.vercel/
 .env*
 !.env.example
 *.tsbuildinfo

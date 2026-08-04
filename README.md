@@ -1,11 +1,21 @@
 # Litter Log
 
-Native iOS app for one-tap cat litter event tracking.
+Private one-tap litter tracking for cat urinary monitoring.
 
-**Open the Xcode project here:**
+## Projects in this repository
 
-[`LitterLog/LitterLog.xcodeproj`](LitterLog/LitterLog.xcodeproj)
+### Native iOS app
 
-Full setup, signing, App Group, widget, and test instructions:
+- Path: [`LitterLog/`](LitterLog/)
+- Xcode project: [`LitterLog/LitterLog.xcodeproj`](LitterLog/LitterLog.xcodeproj)
+- Docs: [`LitterLog/README.md`](LitterLog/README.md)
+- Includes interactive Home Screen widget (requires Mac + Xcode)
 
-[`LitterLog/README.md`](LitterLog/README.md)
+### Web PWA (no Mac required)
+
+- Path: [`LitterLogWeb/`](LitterLogWeb/)
+- Docs: [`LitterLogWeb/README.md`](LitterLogWeb/README.md)
+- Install from Safari → Add to Home Screen
+- Local-only IndexedDB storage; no backend
+
+The native and web apps are separate. Prefer the web PWA if you need to use Litter Log on an iPhone immediately without Xcode.
