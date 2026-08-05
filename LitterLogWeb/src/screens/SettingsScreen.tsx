@@ -44,16 +44,21 @@ export function SettingsScreen({
     archiveAnimal,
     restoreAnimal,
     technicalStorageError,
+    loadError,
+    runStorageProbe,
+    resetLocalStorage,
   } = state
   const fileRef = useRef<HTMLInputElement>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmImport, setConfirmImport] = useState<File | null>(null)
+  const [confirmResetStorage, setConfirmResetStorage] = useState(false)
   const [importResult, setImportResult] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [animalError, setAnimalError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const [showDiagnostics, setShowDiagnostics] = useState(false)
+  const [probeResult, setProbeResult] = useState<string | null>(null)
 
   const orderedAnimals = [...animals].sort((a, b) => {
     if (Boolean(a.isSystem) !== Boolean(b.isSystem)) {
@@ -501,12 +506,61 @@ export function SettingsScreen({
             : 'Show technical details'}
         </button>
         {showDiagnostics ? (
-          <p className="muted" style={{ marginTop: 8 }}>
-            {technicalStorageError
-              ? technicalStorageError
-              : 'No storage errors recorded in this session.'}
-            {import.meta.env.DEV ? ' · development build' : ''}
-          </p>
+          <div className="diagnostics-panel">
+            <p className="muted">
+              Last error:{' '}
+              {technicalStorageError
+                ? technicalStorageError
+                : 'No storage errors recorded in this session.'}
+              {import.meta.env.DEV ? ' · development build' : ''}
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                void runStorageProbe().then((result) => {
+                  setProbeResult(
+                    result.ok
+                      ? `Open OK · version ${result.version} · stores: ${result.stores.join(', ') || '(none)'}`
+                      : `Open failed · ${result.technical}`,
+                  )
+                })
+              }}
+            >
+              Test storage open
+            </button>
+            {probeResult ? <p className="muted">{probeResult}</p> : null}
+            {loadError ? (
+              <>
+                <p className="muted">
+                  Reset local Litter Log storage removes animals and records
+                  stored in this browser. Use only if recovery keeps failing.
+                  This never runs automatically.
+                </p>
+                {events.length > 0 ? (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => void exportBackup()}
+                  >
+                    Export JSON backup first
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={() => setConfirmResetStorage(true)}
+                >
+                  Reset local Litter Log storage
+                </button>
+              </>
+            ) : (
+              <p className="muted">
+                Storage is working. The reset action stays hidden while recovery
+                succeeds.
+              </p>
+            )}
+          </div>
         ) : null}
       </div>
 
@@ -584,6 +638,53 @@ export function SettingsScreen({
               }}
             >
               Import and merge
+            </button>
+          </div>
+        </Dialog>
+      ) : null}
+
+      {confirmResetStorage ? (
+        <Dialog
+          title="Reset local storage?"
+          onClose={() => setConfirmResetStorage(false)}
+        >
+          <p>
+            This permanently deletes locally stored animals and litter records
+            on this device. Export a JSON backup first if any records can still
+            be read. This cannot be undone.
+          </p>
+          <div className="btn-row">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setConfirmResetStorage(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={() => {
+                setConfirmResetStorage(false)
+                void resetLocalStorage()
+                  .then(() =>
+                    setStatus({
+                      kind: 'success',
+                      message: 'Local storage reset',
+                    }),
+                  )
+                  .catch((error: unknown) =>
+                    setStatus({
+                      kind: 'error',
+                      message:
+                        error instanceof Error
+                          ? error.message
+                          : 'Could not reset storage.',
+                    }),
+                  )
+              }}
+            >
+              Reset storage
             </button>
           </div>
         </Dialog>

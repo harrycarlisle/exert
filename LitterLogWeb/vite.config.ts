@@ -61,8 +61,11 @@ export default defineConfig(({ command }) => {
           // Relative to base — must NOT be root-absolute "/index.html".
           navigateFallback: 'index.html',
           navigateFallbackAllowlist: [/^(?!\/__).*/],
+          // Drop outdated precaches so Home Screen PWAs pick up new hashed assets.
           cleanupOutdatedCaches: true,
+          // Claim clients after skipWaiting so Update now activates the new bundle.
           clientsClaim: true,
+          // Keep false so activation waits for an explicit Update now action.
           skipWaiting: false,
         },
         devOptions: {

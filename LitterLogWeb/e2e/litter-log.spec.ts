@@ -19,12 +19,28 @@ test('log, undo, edit, persist across animals', async ({ page }) => {
 
   await expect(page.getByRole('radio', { name: 'Cleo' })).toBeVisible()
   await expect(page.getByRole('radio', { name: 'Bower' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add animal' })).toBeVisible()
   await expect(page.getByRole('radio', { name: 'Cleo' })).toHaveAttribute(
     'aria-checked',
     'true',
   )
 
   await expect(page.getByRole('heading', { name: 'Recent' })).toHaveCount(0)
+
+  await page.locator('.animal-add-btn').click()
+  const addSheet = page.getByRole('dialog', { name: 'Add animal' })
+  await expect(addSheet).toBeVisible()
+  await addSheet.getByLabel('Animal name').fill('Mochi')
+  await addSheet
+    .getByRole('button', { name: 'Add animal', exact: true })
+    .click()
+  await expect(page.getByRole('radio', { name: 'Mochi' })).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'Mochi' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  )
+
+  await page.getByRole('radio', { name: 'Cleo' }).click()
 
   await page.getByRole('button', { name: 'Pee', exact: true }).click()
   await expect(
@@ -123,6 +139,9 @@ test('logging controls and animal selector fit without scroll on narrow phone', 
   ).toBeInViewport()
   await expect(page.getByRole('radio', { name: 'Cleo' })).toBeInViewport()
   await expect(page.getByRole('radio', { name: 'Bower' })).toBeInViewport()
+  await expect(
+    page.getByRole('button', { name: 'Add animal' }),
+  ).toBeInViewport()
   const pee = page.getByRole('button', { name: 'Pee', exact: true })
   const poo = page.getByRole('button', { name: 'Poo', exact: true })
   const tried = page.getByRole('button', { name: 'Tried to Pee', exact: true })
@@ -130,4 +149,44 @@ test('logging controls and animal selector fit without scroll on narrow phone', 
   await expect(poo).toBeInViewport()
   await expect(tried).toBeInViewport()
   await expect(page.getByText(/Cleo today:/i)).toBeInViewport()
+})
+
+test('rejects empty and duplicate animal names from main screen', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const key = '__litterLogE2ENameValidation'
+    if (!sessionStorage.getItem(key)) {
+      indexedDB.deleteDatabase('litter-log')
+      localStorage.clear()
+      sessionStorage.setItem(key, '1')
+    }
+  })
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Litter Log' })).toBeVisible()
+  const installBanner = page.locator('.install-banner')
+  if (await installBanner.isVisible().catch(() => false)) {
+    await installBanner.getByRole('button', { name: 'Dismiss' }).click()
+    await expect(installBanner).toHaveCount(0)
+  }
+
+  await expect(page.getByRole('radio', { name: 'Cleo' })).toBeVisible()
+  await page.locator('.animal-add-btn').click()
+  const addSheet = page.getByRole('dialog', { name: 'Add animal' })
+  await expect(addSheet).toBeVisible()
+  await addSheet
+    .getByRole('button', { name: 'Add animal', exact: true })
+    .click({
+      force: true,
+    })
+  await expect(addSheet.getByText(/empty/i)).toBeVisible()
+
+  await addSheet.getByLabel('Animal name').fill('cleo')
+  await addSheet
+    .getByRole('button', { name: 'Add animal', exact: true })
+    .click({
+      force: true,
+    })
+  await expect(addSheet.getByText(/already used/i)).toBeVisible()
+  await expect(addSheet).toBeVisible()
 })

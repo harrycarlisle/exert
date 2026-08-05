@@ -25,7 +25,37 @@ export default function App() {
     updateServiceWorker,
   } = useRegisterSW({
     immediate: true,
+    onRegisteredSW(_swUrl, registration) {
+      if (!registration) return
+      // Check for updates when the installed PWA becomes visible again.
+      const check = () => {
+        void registration.update()
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') check()
+      })
+      window.setInterval(check, 60 * 60 * 1000)
+    },
   })
+
+  useEffect(() => {
+    let refreshing = false
+    const onControllerChange = () => {
+      if (refreshing) return
+      refreshing = true
+      window.location.reload()
+    }
+    navigator.serviceWorker?.addEventListener(
+      'controllerchange',
+      onControllerChange,
+    )
+    return () => {
+      navigator.serviceWorker?.removeEventListener(
+        'controllerchange',
+        onControllerChange,
+      )
+    }
+  }, [])
 
   useEffect(() => {
     const appearance = state.settings.appearance
@@ -175,7 +205,7 @@ export default function App() {
         <HomeScreen state={state} onDeleteRequest={setPendingDelete} />
       )}
 
-      {state.status ? (
+      {state.status && !state.loadError ? (
         <StatusBanner
           status={state.status}
           onUndo={() => void state.undo()}

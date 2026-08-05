@@ -20,22 +20,32 @@ import {
   type BathroomEvent,
 } from '../models/types'
 
-const DB_NAME = 'litter-log'
-const DB_VERSION = 2
+export const DB_NAME = 'litter-log'
+/** v3 repairs incomplete v2 schemas (missing animals store / indexes). */
+export const DB_VERSION = 3
 const EVENTS_STORE = 'events'
 const SETTINGS_STORE = 'settings'
 const ANIMALS_STORE = 'animals'
 const SETTINGS_KEY = 'app'
 
+const BLOCKED_WAIT_MS = 2500
+const BLOCKED_RETRY_LIMIT = 2
+
 export class StorageError extends Error {
   readonly userMessage: string
   readonly technicalMessage: string
+  readonly errorName: string | null
 
-  constructor(userMessage: string, technicalMessage?: string) {
+  constructor(
+    userMessage: string,
+    technicalMessage?: string,
+    errorName: string | null = null,
+  ) {
     super(userMessage)
     this.name = 'StorageError'
     this.userMessage = userMessage
     this.technicalMessage = technicalMessage ?? userMessage
+    this.errorName = errorName
   }
 }
 
@@ -46,6 +56,13 @@ let cachedDb: IDBDatabase | null = null
 let factoryOverride: IDBFactoryLike | null = null
 let migrationPromise: Promise<void> | null = null
 let lastTechnicalError: string | null = null
+let schemaReadyFor: IDBDatabase | null = null
+/** Temporary bump used only to repair an incomplete schema at the current version. */
+let repairTargetVersion: number | null = null
+
+function targetDbVersion(): number {
+  return repairTargetVersion ?? DB_VERSION
+}
 
 /** Test-only: use a fake/isolated IndexedDB factory. */
 export function setIndexedDBFactory(factory: IDBFactoryLike | null): void {
@@ -57,16 +74,27 @@ export function getLastTechnicalStorageError(): string | null {
   return lastTechnicalError
 }
 
+export function formatDomException(error: unknown): string {
+  if (error instanceof DOMException || error instanceof Error) {
+    const name = error.name || 'Error'
+    const message = error.message?.trim() || '(no message)'
+    const code =
+      'code' in error && typeof (error as DOMException).code === 'number'
+        ? ` code=${(error as DOMException).code}`
+        : ''
+    return `${name}: ${message}${code}`
+  }
+  return String(error)
+}
+
 function rememberTechnicalError(error: unknown): void {
   if (error instanceof StorageError) {
-    lastTechnicalError = error.technicalMessage
+    lastTechnicalError = error.errorName
+      ? `${error.errorName}: ${error.technicalMessage}`
+      : error.technicalMessage
     return
   }
-  if (error instanceof Error) {
-    lastTechnicalError = error.message
-    return
-  }
-  lastTechnicalError = String(error)
+  lastTechnicalError = formatDomException(error)
 }
 
 function getFactory(): IDBFactoryLike {
@@ -75,9 +103,72 @@ function getFactory(): IDBFactoryLike {
     throw new StorageError(
       STORAGE_LOAD_ERROR,
       'IndexedDB is not available in this browser.',
+      'Unavailable',
     )
   }
   return factory
+}
+
+function hasCompleteSchema(db: IDBDatabase): boolean {
+  if (!db.objectStoreNames.contains(EVENTS_STORE)) return false
+  if (!db.objectStoreNames.contains(SETTINGS_STORE)) return false
+  if (!db.objectStoreNames.contains(ANIMALS_STORE)) return false
+  try {
+    const tx = db.transaction([EVENTS_STORE, ANIMALS_STORE], 'readonly')
+    const events = tx.objectStore(EVENTS_STORE)
+    const animals = tx.objectStore(ANIMALS_STORE)
+    return (
+      events.indexNames.contains('timestamp') &&
+      events.indexNames.contains('type') &&
+      events.indexNames.contains('animalId') &&
+      animals.indexNames.contains('name') &&
+      animals.indexNames.contains('archived')
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Idempotent schema ensure — never recreate existing stores/indexes.
+ * Safe for fresh installs, v1→v2, and incomplete v2 repairs (v3).
+ */
+export function ensureObjectStores(db: IDBDatabase, tx: IDBTransaction): void {
+  if (!db.objectStoreNames.contains(EVENTS_STORE)) {
+    const store = db.createObjectStore(EVENTS_STORE, { keyPath: 'id' })
+    store.createIndex('timestamp', 'timestamp', { unique: false })
+    store.createIndex('type', 'type', { unique: false })
+    store.createIndex('animalId', 'animalId', { unique: false })
+  } else if (tx.objectStoreNames.contains(EVENTS_STORE)) {
+    const eventsStore = tx.objectStore(EVENTS_STORE)
+    if (!eventsStore.indexNames.contains('timestamp')) {
+      eventsStore.createIndex('timestamp', 'timestamp', { unique: false })
+    }
+    if (!eventsStore.indexNames.contains('type')) {
+      eventsStore.createIndex('type', 'type', { unique: false })
+    }
+    if (!eventsStore.indexNames.contains('animalId')) {
+      eventsStore.createIndex('animalId', 'animalId', { unique: false })
+    }
+  }
+
+  if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
+    db.createObjectStore(SETTINGS_STORE, { keyPath: 'key' })
+  }
+
+  if (!db.objectStoreNames.contains(ANIMALS_STORE)) {
+    const animals = db.createObjectStore(ANIMALS_STORE, { keyPath: 'id' })
+    animals.createIndex('name', 'name', { unique: false })
+    animals.createIndex('archived', 'archived', { unique: false })
+  } else if (tx.objectStoreNames.contains(ANIMALS_STORE)) {
+    const animalsStore = tx.objectStore(ANIMALS_STORE)
+    if (!animalsStore.indexNames.contains('name')) {
+      animalsStore.createIndex('name', 'name', { unique: false })
+    }
+    if (!animalsStore.indexNames.contains('archived')) {
+      animalsStore.createIndex('archived', 'archived', { unique: false })
+    }
+  }
 }
 
 function wireDatabase(db: IDBDatabase): IDBDatabase {
@@ -87,6 +178,7 @@ function wireDatabase(db: IDBDatabase): IDBDatabase {
       cachedDb = null
       dbPromise = null
       migrationPromise = null
+      schemaReadyFor = null
     }
   }
   db.onversionchange = () => {
@@ -99,114 +191,186 @@ function wireDatabase(db: IDBDatabase): IDBDatabase {
       cachedDb = null
       dbPromise = null
       migrationPromise = null
+      schemaReadyFor = null
     }
   }
   return db
 }
 
-function openDatabaseInternal(): Promise<IDBDatabase> {
+function openAtVersion(version?: number): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     let request: IDBOpenDBRequest
     let settled = false
+    let blockedTimer: ReturnType<typeof setTimeout> | null = null
+
+    const cleanup = () => {
+      if (blockedTimer) {
+        clearTimeout(blockedTimer)
+        blockedTimer = null
+      }
+    }
 
     const fail = (error: unknown) => {
       if (settled) return
       settled = true
+      cleanup()
       rememberTechnicalError(error)
+      if (error instanceof StorageError) {
+        reject(error)
+        return
+      }
       reject(
-        error instanceof StorageError
-          ? error
-          : new StorageError(
-              STORAGE_LOAD_ERROR,
-              error instanceof Error
-                ? error.message
-                : 'Could not open local storage.',
-            ),
+        new StorageError(
+          STORAGE_LOAD_ERROR,
+          formatDomException(error),
+          error instanceof Error ? error.name : null,
+        ),
       )
     }
 
     const succeed = (db: IDBDatabase) => {
       if (settled) return
       settled = true
-      resolve(wireDatabase(db))
+      cleanup()
+      resolve(db)
     }
 
     try {
-      request = getFactory().open(DB_NAME, DB_VERSION)
+      request =
+        version === undefined
+          ? getFactory().open(DB_NAME)
+          : getFactory().open(DB_NAME, version)
     } catch (error) {
       fail(error)
       return
     }
 
-    request.onupgradeneeded = (event) => {
-      const db = request.result
-      const oldVersion = event.oldVersion
-
-      if (!db.objectStoreNames.contains(EVENTS_STORE)) {
-        const store = db.createObjectStore(EVENTS_STORE, { keyPath: 'id' })
-        store.createIndex('timestamp', 'timestamp', { unique: false })
-        store.createIndex('type', 'type', { unique: false })
-        store.createIndex('animalId', 'animalId', { unique: false })
-      }
-
-      if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
-        db.createObjectStore(SETTINGS_STORE, { keyPath: 'key' })
-      }
-
-      if (oldVersion < 2) {
-        if (!db.objectStoreNames.contains(ANIMALS_STORE)) {
-          const animals = db.createObjectStore(ANIMALS_STORE, {
-            keyPath: 'id',
-          })
-          animals.createIndex('name', 'name', { unique: false })
-          animals.createIndex('archived', 'archived', { unique: false })
-        }
-
-        // Add animalId index when upgrading; only if the events store already existed.
+    request.onupgradeneeded = () => {
+      try {
+        const db = request.result
         const tx = request.transaction
-        if (tx && db.objectStoreNames.contains(EVENTS_STORE)) {
-          const eventsStore = tx.objectStore(EVENTS_STORE)
-          if (!eventsStore.indexNames.contains('animalId')) {
-            eventsStore.createIndex('animalId', 'animalId', { unique: false })
-          }
+        if (!tx) {
+          throw new StorageError(
+            STORAGE_LOAD_ERROR,
+            'InvalidStateError: upgrade transaction missing during onupgradeneeded.',
+            'InvalidStateError',
+          )
         }
+        ensureObjectStores(db, tx)
+      } catch (error) {
+        fail(error)
       }
     }
 
     request.onsuccess = () => succeed(request.result)
-    request.onerror = () =>
+    request.onerror = () => {
+      const err = request.error
       fail(
         new StorageError(
           STORAGE_LOAD_ERROR,
-          request.error?.message ?? 'Could not open database.',
+          err ? formatDomException(err) : 'Could not open database.',
+          err?.name ?? 'OpenError',
         ),
       )
+    }
     request.onblocked = () => {
-      // Another connection is blocking the upgrade. Wait briefly; onsuccess/onerror still fire.
-      window.setTimeout(() => {
-        if (!settled) {
-          fail(
-            new StorageError(
-              STORAGE_LOAD_ERROR,
-              'Database upgrade blocked by another open connection.',
-            ),
-          )
-        }
-      }, 4000)
+      if (settled || blockedTimer) return
+      blockedTimer = setTimeout(() => {
+        fail(
+          new StorageError(
+            STORAGE_LOAD_ERROR,
+            'AbortError: Database upgrade blocked by another open connection.',
+            'AbortError',
+          ),
+        )
+      }, BLOCKED_WAIT_MS)
     }
   })
 }
 
-async function openDatabase(): Promise<IDBDatabase> {
-  if (cachedDb) return cachedDb
-  if (!dbPromise) {
-    dbPromise = openDatabaseInternal().catch((error) => {
-      dbPromise = null
-      cachedDb = null
-      throw error
-    })
+async function openDatabaseInternal(attempt = 0): Promise<IDBDatabase> {
+  const version = targetDbVersion()
+  try {
+    const db = await openAtVersion(version)
+    return wireDatabase(db)
+  } catch (error) {
+    const technical = formatDomException(error)
+    const errorName =
+      error instanceof StorageError
+        ? error.errorName
+        : error instanceof Error
+          ? error.name
+          : null
+
+    // Requesting a lower version than an existing DB raises VersionError.
+    // Never delete or reopen with a lower version.
+    if (errorName === 'VersionError' || technical.includes('VersionError')) {
+      throw new StorageError(
+        STORAGE_LOAD_ERROR,
+        `VersionError: existing database is newer than this app supports (${version}). The database was not modified.`,
+        'VersionError',
+      )
+    }
+
+    const isBlocked =
+      technical.includes('blocked') || errorName === 'AbortError'
+
+    if (isBlocked && attempt < BLOCKED_RETRY_LIMIT) {
+      await resetDatabaseConnection()
+      await new Promise((resolve) => setTimeout(resolve, 350))
+      return openDatabaseInternal(attempt + 1)
+    }
+
+    throw error instanceof StorageError
+      ? error
+      : new StorageError(
+          STORAGE_LOAD_ERROR,
+          technical,
+          error instanceof Error ? error.name : null,
+        )
   }
+}
+
+/**
+ * Probe IndexedDB with a real open() — never use indexedDB.databases().
+ */
+export async function probeIndexedDBOpen(): Promise<{
+  ok: boolean
+  version: number | null
+  stores: string[]
+  technical: string | null
+}> {
+  try {
+    await resetDatabaseConnection()
+    const db = await openDatabaseInternal()
+    const stores = [...db.objectStoreNames]
+    const version = db.version
+    return { ok: true, version, stores, technical: null }
+  } catch (error) {
+    return {
+      ok: false,
+      version: null,
+      stores: [],
+      technical: formatDomException(error),
+    }
+  }
+}
+
+async function openDatabase(): Promise<IDBDatabase> {
+  if (!dbPromise) {
+    dbPromise = openDatabaseInternal()
+      .then((db) => db)
+      .catch((error) => {
+        // Never permanently cache a rejected open promise.
+        dbPromise = null
+        cachedDb = null
+        schemaReadyFor = null
+        throw error
+      })
+  }
+
   const db = await dbPromise
+  cachedDb = db
   await ensureAnimalMigration(db)
   return db
 }
@@ -214,33 +378,42 @@ async function openDatabase(): Promise<IDBDatabase> {
 function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result)
-    request.onerror = () =>
+    request.onerror = () => {
+      const err = request.error
       reject(
         new StorageError(
           STORAGE_SAVE_ERROR,
-          request.error?.message ?? 'Storage request failed.',
+          err ? formatDomException(err) : 'Storage request failed.',
+          err?.name ?? 'RequestError',
         ),
       )
+    }
   })
 }
 
 function txDone(tx: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve()
-    tx.onerror = () =>
+    tx.onerror = () => {
+      const err = tx.error
       reject(
         new StorageError(
           STORAGE_SAVE_ERROR,
-          tx.error?.message ?? 'Storage transaction failed.',
+          err ? formatDomException(err) : 'Storage transaction failed.',
+          err?.name ?? 'TransactionError',
         ),
       )
-    tx.onabort = () =>
+    }
+    tx.onabort = () => {
+      const err = tx.error
       reject(
         new StorageError(
           STORAGE_SAVE_ERROR,
-          tx.error?.message ?? 'Storage transaction aborted.',
+          err ? formatDomException(err) : 'Storage transaction aborted.',
+          err?.name ?? 'AbortError',
         ),
       )
+    }
   })
 }
 
@@ -285,7 +458,6 @@ function normalizeSettings(
     backupReminderDismissed: raw.backupReminderDismissed ?? false,
     installPromptDismissed: raw.installPromptDismissed ?? false,
     schemaVersion: CURRENT_SETTINGS_SCHEMA,
-    // Keep catName only in-memory for migration helpers; strip on save.
     catName: typeof raw.catName === 'string' ? raw.catName : undefined,
   }
 }
@@ -326,17 +498,33 @@ async function readSettingsRaw(
  * Safe to interrupt and re-run; never deletes existing events.
  */
 async function ensureAnimalMigration(db: IDBDatabase): Promise<void> {
-  if (migrationPromise) {
+  if (schemaReadyFor === db && migrationPromise) {
     await migrationPromise
     return
   }
 
+  if (migrationPromise) {
+    await migrationPromise
+    if (schemaReadyFor === db) return
+  }
+
   migrationPromise = (async () => {
-    if (!db.objectStoreNames.contains(ANIMALS_STORE)) {
-      // Unexpected: upgrade should have created the store. Force reconnect on next open.
+    if (!hasCompleteSchema(db)) {
+      // Schema incomplete at current version — bump once and reopen so
+      // onupgradeneeded can create missing stores/indexes. Never delete data.
+      repairTargetVersion = Math.max(db.version + 1, DB_VERSION + 1)
+      try {
+        db.close()
+      } catch {
+        // ignore
+      }
+      cachedDb = null
+      dbPromise = null
+      schemaReadyFor = null
       throw new StorageError(
         STORAGE_LOAD_ERROR,
-        'Animals store missing after database open.',
+        `InvalidStateError: Incomplete schema detected at version ${db.version} (missing animals store or indexes). Reopen required for repair upgrade to ${repairTargetVersion}.`,
+        'InvalidStateError',
       )
     }
 
@@ -372,9 +560,6 @@ async function ensureAnimalMigration(db: IDBDatabase): Promise<void> {
       } else if (eventsRaw.some((event) => !event.animalId)) {
         animals.push(createUnassignedAnimal(now))
       }
-    } else {
-      // Ensure seed names exist for fresh installs that somehow only have custom animals.
-      // Do not force-add Cleo/Bower if the user already has animals from an earlier migration.
     }
 
     const resolveLegacyTargetId = (): string => {
@@ -453,25 +638,47 @@ async function ensureAnimalMigration(db: IDBDatabase): Promise<void> {
       }
       await txDone(tx)
     }
-  })()
-    .catch((error) => {
-      migrationPromise = null
-      rememberTechnicalError(error)
-      throw error instanceof StorageError
-        ? error
-        : new StorageError(STORAGE_LOAD_ERROR, String(error))
-    })
-    .then(() => {
-      // Keep migrationPromise resolved so subsequent opens skip re-entry work
-      // unless the connection is reset.
-    })
+
+    schemaReadyFor = db
+  })().catch((error) => {
+    migrationPromise = null
+    schemaReadyFor = null
+    rememberTechnicalError(error)
+    throw error instanceof StorageError
+      ? error
+      : new StorageError(
+          STORAGE_LOAD_ERROR,
+          formatDomException(error),
+          error instanceof Error ? error.name : null,
+        )
+  })
 
   await migrationPromise
 }
 
-export async function fetchAnimals(): Promise<Animal[]> {
+async function openDatabaseWithRepair(): Promise<IDBDatabase> {
   try {
     const db = await openDatabase()
+    repairTargetVersion = null
+    return db
+  } catch (error) {
+    const technical = formatDomException(error)
+    const needsRepair =
+      technical.includes('Incomplete schema') ||
+      technical.includes('Animals store missing')
+    if (!needsRepair) throw error
+
+    // Force a clean reopen so onupgradeneeded can repair missing stores/indexes.
+    await resetDatabaseConnection()
+    const db = await openDatabase()
+    repairTargetVersion = null
+    return db
+  }
+}
+
+export async function fetchAnimals(): Promise<Animal[]> {
+  try {
+    const db = await openDatabaseWithRepair()
     const animals = await readAllAnimals(db)
     return animals.sort((a, b) => {
       const orderA = a.displayOrder ?? Number.MAX_SAFE_INTEGER
@@ -482,14 +689,18 @@ export async function fetchAnimals(): Promise<Animal[]> {
   } catch (error) {
     rememberTechnicalError(error)
     if (error instanceof StorageError) throw error
-    throw new StorageError(STORAGE_LOAD_ERROR, 'Could not read animals.')
+    throw new StorageError(
+      STORAGE_LOAD_ERROR,
+      formatDomException(error),
+      error instanceof Error ? error.name : null,
+    )
   }
 }
 
 export async function putAnimal(animal: Animal): Promise<Animal> {
   const normalized = normalizeAnimal(animal)
   try {
-    const db = await openDatabase()
+    const db = await openDatabaseWithRepair()
     const tx = db.transaction(ANIMALS_STORE, 'readwrite')
     tx.objectStore(ANIMALS_STORE).put(normalized)
     await txDone(tx)
@@ -497,13 +708,17 @@ export async function putAnimal(animal: Animal): Promise<Animal> {
   } catch (error) {
     rememberTechnicalError(error)
     if (error instanceof StorageError) throw error
-    throw new StorageError(STORAGE_SAVE_ERROR, 'Could not save animal.')
+    throw new StorageError(
+      STORAGE_SAVE_ERROR,
+      formatDomException(error),
+      error instanceof Error ? error.name : null,
+    )
   }
 }
 
 export async function putManyAnimals(animals: Animal[]): Promise<void> {
   try {
-    const db = await openDatabase()
+    const db = await openDatabaseWithRepair()
     const tx = db.transaction(ANIMALS_STORE, 'readwrite')
     const store = tx.objectStore(ANIMALS_STORE)
     for (const animal of animals) {
@@ -513,13 +728,17 @@ export async function putManyAnimals(animals: Animal[]): Promise<void> {
   } catch (error) {
     rememberTechnicalError(error)
     if (error instanceof StorageError) throw error
-    throw new StorageError(STORAGE_SAVE_ERROR, 'Could not save animals.')
+    throw new StorageError(
+      STORAGE_SAVE_ERROR,
+      formatDomException(error),
+      error instanceof Error ? error.name : null,
+    )
   }
 }
 
 export async function fetchEvents(): Promise<BathroomEvent[]> {
   try {
-    const db = await openDatabase()
+    const db = await openDatabaseWithRepair()
     const tx = db.transaction(EVENTS_STORE, 'readonly')
     const store = tx.objectStore(EVENTS_STORE)
     const rows = await requestToPromise(store.getAll())
@@ -533,7 +752,11 @@ export async function fetchEvents(): Promise<BathroomEvent[]> {
   } catch (error) {
     rememberTechnicalError(error)
     if (error instanceof StorageError) throw error
-    throw new StorageError(STORAGE_LOAD_ERROR, 'Could not read litter records.')
+    throw new StorageError(
+      STORAGE_LOAD_ERROR,
+      formatDomException(error),
+      error instanceof Error ? error.name : null,
+    )
   }
 }
 
@@ -542,11 +765,12 @@ export async function putEvent(event: BathroomEvent): Promise<BathroomEvent> {
     throw new StorageError(
       STORAGE_SAVE_ERROR,
       'Cannot save an event without animalId.',
+      'ValidationError',
     )
   }
   const normalized = normalizeEvent(event)
   try {
-    const db = await openDatabase()
+    const db = await openDatabaseWithRepair()
     const tx = db.transaction(EVENTS_STORE, 'readwrite')
     tx.objectStore(EVENTS_STORE).put(normalized)
     await txDone(tx)
@@ -554,13 +778,17 @@ export async function putEvent(event: BathroomEvent): Promise<BathroomEvent> {
   } catch (error) {
     rememberTechnicalError(error)
     if (error instanceof StorageError) throw error
-    throw new StorageError(STORAGE_SAVE_ERROR, 'Could not save that entry.')
+    throw new StorageError(
+      STORAGE_SAVE_ERROR,
+      formatDomException(error),
+      error instanceof Error ? error.name : null,
+    )
   }
 }
 
 export async function putManyEvents(events: BathroomEvent[]): Promise<void> {
   try {
-    const db = await openDatabase()
+    const db = await openDatabaseWithRepair()
     const tx = db.transaction(EVENTS_STORE, 'readwrite')
     const store = tx.objectStore(EVENTS_STORE)
     for (const event of events) {
@@ -568,6 +796,7 @@ export async function putManyEvents(events: BathroomEvent[]): Promise<void> {
         throw new StorageError(
           STORAGE_SAVE_ERROR,
           'Cannot save an event without animalId.',
+          'ValidationError',
         )
       }
       store.put(normalizeEvent(event))
@@ -576,39 +805,51 @@ export async function putManyEvents(events: BathroomEvent[]): Promise<void> {
   } catch (error) {
     rememberTechnicalError(error)
     if (error instanceof StorageError) throw error
-    throw new StorageError(STORAGE_SAVE_ERROR, 'Could not save litter records.')
+    throw new StorageError(
+      STORAGE_SAVE_ERROR,
+      formatDomException(error),
+      error instanceof Error ? error.name : null,
+    )
   }
 }
 
 export async function deleteEvent(id: string): Promise<void> {
   try {
-    const db = await openDatabase()
+    const db = await openDatabaseWithRepair()
     const tx = db.transaction(EVENTS_STORE, 'readwrite')
     tx.objectStore(EVENTS_STORE).delete(id)
     await txDone(tx)
   } catch (error) {
     rememberTechnicalError(error)
     if (error instanceof StorageError) throw error
-    throw new StorageError(STORAGE_SAVE_ERROR, 'Could not delete that entry.')
+    throw new StorageError(
+      STORAGE_SAVE_ERROR,
+      formatDomException(error),
+      error instanceof Error ? error.name : null,
+    )
   }
 }
 
 export async function deleteAllEvents(): Promise<void> {
   try {
-    const db = await openDatabase()
+    const db = await openDatabaseWithRepair()
     const tx = db.transaction(EVENTS_STORE, 'readwrite')
     tx.objectStore(EVENTS_STORE).clear()
     await txDone(tx)
   } catch (error) {
     rememberTechnicalError(error)
     if (error instanceof StorageError) throw error
-    throw new StorageError(STORAGE_SAVE_ERROR, 'Could not delete history.')
+    throw new StorageError(
+      STORAGE_SAVE_ERROR,
+      formatDomException(error),
+      error instanceof Error ? error.name : null,
+    )
   }
 }
 
 export async function fetchSettings(): Promise<AppSettings> {
   try {
-    const db = await openDatabase()
+    const db = await openDatabaseWithRepair()
     const raw = await readSettingsRaw(db)
     const animals = await readAllAnimals(db)
     const settings = normalizeSettings(raw)
@@ -621,7 +862,11 @@ export async function fetchSettings(): Promise<AppSettings> {
   } catch (error) {
     rememberTechnicalError(error)
     if (error instanceof StorageError) throw error
-    throw new StorageError(STORAGE_LOAD_ERROR, 'Could not read settings.')
+    throw new StorageError(
+      STORAGE_LOAD_ERROR,
+      formatDomException(error),
+      error instanceof Error ? error.name : null,
+    )
   }
 }
 
@@ -631,7 +876,7 @@ export async function saveSettings(
   const next = normalizeSettings(settings)
   delete next.catName
   try {
-    const db = await openDatabase()
+    const db = await openDatabaseWithRepair()
     const tx = db.transaction(SETTINGS_STORE, 'readwrite')
     tx.objectStore(SETTINGS_STORE).put({ key: SETTINGS_KEY, ...next })
     await txDone(tx)
@@ -639,7 +884,11 @@ export async function saveSettings(
   } catch (error) {
     rememberTechnicalError(error)
     if (error instanceof StorageError) throw error
-    throw new StorageError(STORAGE_SAVE_ERROR, 'Could not save settings.')
+    throw new StorageError(
+      STORAGE_SAVE_ERROR,
+      formatDomException(error),
+      error instanceof Error ? error.name : null,
+    )
   }
 }
 
@@ -671,28 +920,59 @@ export async function resetDatabaseConnection(): Promise<void> {
   cachedDb = null
   dbPromise = null
   migrationPromise = null
+  schemaReadyFor = null
+  // Keep repairTargetVersion across connection resets during an active repair.
 }
 
 export async function recoverStorage(): Promise<void> {
   await resetDatabaseConnection()
   lastTechnicalError = null
-  await openDatabase()
+  await openDatabaseWithRepair()
+  repairTargetVersion = null
 }
 
-export async function deleteDatabaseForTests(): Promise<void> {
+/**
+ * Destructive reset — only for explicit user action in Settings → Diagnostics.
+ * Never called automatically.
+ */
+export async function resetLocalLitterLogStorage(): Promise<void> {
   await resetDatabaseConnection()
   await new Promise<void>((resolve, reject) => {
     const request = getFactory().deleteDatabase(DB_NAME)
     request.onsuccess = () => resolve()
     request.onerror = () =>
       reject(
-        new StorageError(STORAGE_LOAD_ERROR, 'Could not delete test database.'),
+        new StorageError(
+          STORAGE_LOAD_ERROR,
+          request.error
+            ? formatDomException(request.error)
+            : 'Could not reset local storage.',
+          request.error?.name ?? 'DeleteError',
+        ),
       )
-    request.onblocked = () => resolve()
+    request.onblocked = () => {
+      // Still resolve — Safari may fire blocked then success.
+      window.setTimeout(() => resolve(), BLOCKED_WAIT_MS)
+    }
   })
+  lastTechnicalError = null
+  cachedDb = null
+  dbPromise = null
+  migrationPromise = null
+  schemaReadyFor = null
+  repairTargetVersion = null
+}
+
+export async function deleteDatabaseForTests(): Promise<void> {
+  await resetLocalLitterLogStorage()
 }
 
 /** Exported for tests that need to assert migration defaults. */
 export function defaultSelectedAnimalIdFor(animals: Animal[]): string | null {
   return pickDefaultSelectedAnimalId(animals)
+}
+
+/** Test helper: expose whether a rejected promise can stick around. */
+export function getCachedOpenPromiseForTests(): Promise<IDBDatabase> | null {
+  return dbPromise
 }
