@@ -5,7 +5,10 @@ import {
   fetchAnimals,
   fetchEvents,
   fetchSettings,
+  getActiveBackend,
   getLastTechnicalStorageError,
+  getStorageAdapterDiagnostics,
+  initializeStorage,
   probeIndexedDBOpen,
   putAnimal,
   putEvent,
@@ -16,7 +19,7 @@ import {
   resetLocalLitterLogStorage,
   saveSettings,
   StorageError,
-} from '../db/database'
+} from '../db/storageAdapter'
 import {
   activeAnimals,
   canArchiveAnimal,
@@ -99,6 +102,7 @@ export function useLitterLog() {
 
   const refresh = useCallback(async () => {
     try {
+      await initializeStorage()
       const [nextEvents, nextSettings, nextAnimals] = await Promise.all([
         fetchEvents(),
         fetchSettings(),
@@ -535,6 +539,8 @@ export function useLitterLog() {
   }, [refresh])
 
   const canLog = Boolean(selectedAnimalId) && !loadError
+  const storageBackend = getActiveBackend()
+  const storageDiagnostics = getStorageAdapterDiagnostics()
 
   return {
     events,
@@ -548,6 +554,8 @@ export function useLitterLog() {
     loading,
     loadError,
     technicalStorageError: getLastTechnicalStorageError(),
+    storageBackend,
+    storageDiagnostics,
     status,
     setStatus,
     showSafety,

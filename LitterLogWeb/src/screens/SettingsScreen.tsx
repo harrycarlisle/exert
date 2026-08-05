@@ -1,13 +1,25 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ANIMAL_COLOR_OPTIONS,
   PRIVACY_STATEMENT,
   SAFETY_MESSAGE,
   type AppearancePreference,
 } from '../models/types'
+import {
+  activateWaitingServiceWorker,
+  checkForAppUpdate,
+  updateStatusMessage,
+  type UpdateCheckStatus,
+} from '../lib/appUpdates'
 import { backupFilename } from '../lib/backup'
+import { BUILD_SHA, shortBuildSha } from '../lib/buildInfo'
 import { csvFilename, eventsToCsv } from '../lib/csv'
 import { formatDate, parseISO } from '../lib/dates'
+import {
+  buildDiagnosticsText,
+  copyTextToClipboard,
+  readServiceWorkerDiagnostics,
+} from '../lib/diagnostics'
 import { isLikelyIPhoneSafari, isStandaloneDisplay } from '../lib/pwa'
 import { readFileAsText, shareOrDownloadFile } from '../lib/share'
 import type { LitterLogState } from '../state/useLitterLog'
@@ -18,6 +30,8 @@ interface Props {
   focusVet?: boolean
   showInstallHelp: boolean
   onShowInstallHelp: () => void
+  needRefresh?: boolean
+  onUpdateNow?: () => void
 }
 
 export function SettingsScreen({
@@ -25,6 +39,8 @@ export function SettingsScreen({
   focusVet = false,
   showInstallHelp,
   onShowInstallHelp,
+  needRefresh = false,
+  onUpdateNow,
 }: Props) {
   const {
     settings,
@@ -47,6 +63,8 @@ export function SettingsScreen({
     loadError,
     runStorageProbe,
     resetLocalStorage,
+    storageBackend,
+    storageDiagnostics,
   } = state
   const fileRef = useRef<HTMLInputElement>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -59,6 +77,50 @@ export function SettingsScreen({
   const [editingName, setEditingName] = useState('')
   const [showDiagnostics, setShowDiagnostics] = useState(false)
   const [probeResult, setProbeResult] = useState<string | null>(null)
+  const [updateStatus, setUpdateStatus] = useState<UpdateCheckStatus>('idle')
+  const [deployedSha, setDeployedSha] = useState<string | null>(null)
+  const [diagnosticsCopied, setDiagnosticsCopied] = useState(false)
+  const updateCheckInFlight = useRef(false)
+
+  const showUpdateNow = needRefresh || updateStatus === 'ready'
+
+  async function runUpdateCheck(options?: { quiet?: boolean }) {
+    if (updateCheckInFlight.current) return
+    updateCheckInFlight.current = true
+    if (!options?.quiet) setUpdateStatus('checking')
+    try {
+      const result = await checkForAppUpdate({ knownWaiting: needRefresh })
+      setDeployedSha(result.deployedSha)
+      setUpdateStatus(result.status)
+    } catch {
+      if (!options?.quiet) setUpdateStatus('error')
+    } finally {
+      updateCheckInFlight.current = false
+    }
+  }
+
+  useEffect(() => {
+    void runUpdateCheck({ quiet: true })
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void runUpdateCheck({ quiet: true })
+      }
+    }
+    const onFocus = () => {
+      void runUpdateCheck({ quiet: true })
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onFocus)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount + visibility only
+  }, [])
+
+  useEffect(() => {
+    if (needRefresh) setUpdateStatus('ready')
+  }, [needRefresh])
 
   const orderedAnimals = [...animals].sort((a, b) => {
     if (Boolean(a.isSystem) !== Boolean(b.isSystem)) {
@@ -494,6 +556,46 @@ export function SettingsScreen({
       </div>
 
       <div className="settings-section card">
+        <h2>App updates</h2>
+        <p className="muted">App version: {shortBuildSha(BUILD_SHA)}</p>
+        <div className="btn-row">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => void runUpdateCheck()}
+            disabled={
+              updateStatus === 'checking' || updateStatus === 'updating'
+            }
+          >
+            Check for updates
+          </button>
+          {showUpdateNow ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setUpdateStatus('updating')
+                if (onUpdateNow) {
+                  onUpdateNow()
+                  return
+                }
+                void activateWaitingServiceWorker().then((ok) => {
+                  if (!ok) setUpdateStatus('error')
+                })
+              }}
+            >
+              Update now
+            </button>
+          ) : null}
+        </div>
+        {updateStatusMessage(updateStatus) ? (
+          <p className="summary-meta" aria-live="polite">
+            {updateStatusMessage(updateStatus)}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="settings-section card">
         <h2>Diagnostics</h2>
         <button
           type="button"
@@ -508,34 +610,84 @@ export function SettingsScreen({
         {showDiagnostics ? (
           <div className="diagnostics-panel">
             <p className="muted">
+              App version: {shortBuildSha(BUILD_SHA)}
+              {BUILD_SHA !== 'dev' ? ` (${BUILD_SHA})` : ''}
+            </p>
+            <p className="muted">
+              Storage backend: {storageBackend ?? '(none)'}
+              {storageDiagnostics.authority
+                ? ` · authority ${storageDiagnostics.authority}`
+                : ''}
+            </p>
+            <p className="muted">
               Last error:{' '}
               {technicalStorageError
                 ? technicalStorageError
                 : 'No storage errors recorded in this session.'}
+              {storageDiagnostics.lastErrorStage
+                ? ` · stage ${storageDiagnostics.lastErrorStage}`
+                : ''}
               {import.meta.env.DEV ? ' · development build' : ''}
             </p>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                void runStorageProbe().then((result) => {
-                  setProbeResult(
-                    result.ok
-                      ? `Open OK · version ${result.version} · stores: ${result.stores.join(', ') || '(none)'}`
-                      : `Open failed · ${result.technical}`,
-                  )
-                })
-              }}
-            >
-              Test storage open
-            </button>
+            <p className="muted">
+              IndexedDB API: {String(storageDiagnostics.indexedDbApiPresent)} ·
+              open: {String(storageDiagnostics.indexedDbOpenSucceeded)} ·
+              localStorage: {String(storageDiagnostics.localStorageAvailable)} ·
+              other backend has data:{' '}
+              {String(storageDiagnostics.otherBackendHasData)}
+            </p>
+            <div className="btn-row">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  void (async () => {
+                    const sw = await readServiceWorkerDiagnostics()
+                    const text = buildDiagnosticsText({
+                      storage: storageDiagnostics,
+                      deployedSha,
+                      serviceWorker: sw,
+                    })
+                    const ok = await copyTextToClipboard(text)
+                    setDiagnosticsCopied(ok)
+                    if (ok) {
+                      window.setTimeout(() => setDiagnosticsCopied(false), 2500)
+                    }
+                  })()
+                }}
+              >
+                Copy diagnostics
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  void runStorageProbe().then((result) => {
+                    setProbeResult(
+                      result.ok
+                        ? `Open OK · version ${result.version} · stores: ${result.stores.join(', ') || '(none)'}`
+                        : `Open failed · ${result.technical}`,
+                    )
+                  })
+                }}
+              >
+                Test storage open
+              </button>
+            </div>
+            {diagnosticsCopied ? (
+              <p className="summary-meta" role="status">
+                Diagnostics copied
+              </p>
+            ) : null}
             {probeResult ? <p className="muted">{probeResult}</p> : null}
             {loadError ? (
               <>
                 <p className="muted">
                   Reset local Litter Log storage removes animals and records
-                  stored in this browser. Use only if recovery keeps failing.
-                  This never runs automatically.
+                  from the current authoritative backend (
+                  {storageBackend ?? storageDiagnostics.authority ?? 'unknown'}
+                  ). The other backend is left untouched. Use only if recovery
+                  keeps failing. This never runs automatically.
                 </p>
                 {events.length > 0 ? (
                   <button
@@ -649,9 +801,10 @@ export function SettingsScreen({
           onClose={() => setConfirmResetStorage(false)}
         >
           <p>
-            This permanently deletes locally stored animals and litter records
-            on this device. Export a JSON backup first if any records can still
-            be read. This cannot be undone.
+            This permanently deletes animals and litter records from the{' '}
+            {storageBackend ?? storageDiagnostics.authority ?? 'current'}{' '}
+            backend only. The other backend is not cleared. Export a JSON backup
+            first if any records can still be read. This cannot be undone.
           </p>
           <div className="btn-row">
             <button

@@ -130,4 +130,4 @@ export const STORAGE_SAVE_ERROR =
 
 /** User-facing copy when storage cannot be opened for reading. */
 export const STORAGE_LOAD_ERROR =
-  'Litter Log couldn’t access storage on this device.'
+  'Litter Log couldn’t access storage on this device. Your entry wasn’t saved.'

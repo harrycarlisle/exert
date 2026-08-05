@@ -1,4 +1,35 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+
+async function dismissInstallBanner(page: Page) {
+  const banner = page.locator('.install-banner')
+  if (await banner.isVisible().catch(() => false)) {
+    await banner.getByRole('button', { name: 'Dismiss' }).click()
+    await expect(banner).toHaveCount(0)
+  }
+}
+
+async function openSettings(page: Page) {
+  const settingsButton = page.getByRole('button', { name: 'Settings' })
+  const settingsHeading = page.getByRole('heading', { name: 'Settings' })
+  await expect(settingsButton).toBeVisible()
+  await settingsButton.click()
+  if (!(await settingsHeading.isVisible().catch(() => false))) {
+    await settingsButton.click({ force: true })
+  }
+  await expect(settingsHeading).toBeVisible()
+}
+
+async function openAddAnimalSheet(page: Page) {
+  const addButton = page.getByRole('button', { name: 'Add animal' })
+  const sheet = page.getByRole('dialog', { name: 'Add animal' })
+  await expect(addButton).toBeVisible()
+  await addButton.click()
+  if (!(await sheet.isVisible().catch(() => false))) {
+    await addButton.click({ force: true })
+  }
+  await expect(sheet).toBeVisible()
+  return sheet
+}
 
 test('log, undo, edit, persist across animals', async ({ page }) => {
   await page.addInitScript(() => {
@@ -12,10 +43,8 @@ test('log, undo, edit, persist across animals', async ({ page }) => {
 
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Litter Log' })).toBeVisible()
-  const dismissInstall = page.getByRole('button', { name: 'Dismiss' })
-  if (await dismissInstall.isVisible().catch(() => false)) {
-    await dismissInstall.click()
-  }
+  await expect(page.getByRole('radio', { name: 'Cleo' })).toBeVisible()
+  await dismissInstallBanner(page)
 
   await expect(page.getByRole('radio', { name: 'Cleo' })).toBeVisible()
   await expect(page.getByRole('radio', { name: 'Bower' })).toBeVisible()
@@ -27,9 +56,7 @@ test('log, undo, edit, persist across animals', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Recent' })).toHaveCount(0)
 
-  await page.locator('.animal-add-btn').click()
-  const addSheet = page.getByRole('dialog', { name: 'Add animal' })
-  await expect(addSheet).toBeVisible()
+  const addSheet = await openAddAnimalSheet(page)
   await addSheet.getByLabel('Animal name').fill('Mochi')
   await addSheet
     .getByRole('button', { name: 'Add animal', exact: true })
@@ -112,10 +139,8 @@ test('log, undo, edit, persist across animals', async ({ page }) => {
   }
 
   await page.reload()
-  const dismissAgain = page.getByRole('button', { name: 'Dismiss' })
-  if (await dismissAgain.isVisible().catch(() => false)) {
-    await dismissAgain.click()
-  }
+  await expect(page.getByRole('radio', { name: 'Cleo' })).toBeVisible()
+  await dismissInstallBanner(page)
   await expect(page.getByRole('radio', { name: 'Cleo' })).toHaveAttribute(
     'aria-checked',
     'true',
@@ -130,10 +155,8 @@ test('logging controls and animal selector fit without scroll on narrow phone', 
 }) => {
   await page.setViewportSize({ width: 375, height: 667 })
   await page.goto('/')
-  const dismissInstall = page.getByRole('button', { name: 'Dismiss' })
-  if (await dismissInstall.isVisible().catch(() => false)) {
-    await dismissInstall.click()
-  }
+  await expect(page.getByRole('radio', { name: 'Cleo' })).toBeVisible()
+  await dismissInstallBanner(page)
   await expect(
     page.getByRole('heading', { name: 'Litter Log' }),
   ).toBeInViewport()
@@ -151,6 +174,32 @@ test('logging controls and animal selector fit without scroll on narrow phone', 
   await expect(page.getByText(/Cleo today:/i)).toBeInViewport()
 })
 
+test('settings always shows app version and check for updates', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await expect(page.getByRole('radio', { name: 'Cleo' })).toBeVisible()
+  await dismissInstallBanner(page)
+  await openSettings(page)
+  const updates = page.getByRole('heading', { name: 'App updates' })
+  await updates.scrollIntoViewIfNeeded()
+  await expect(updates).toBeVisible()
+  await expect(page.getByText(/App version:/i).first()).toBeVisible()
+  const checkUpdates = page.getByRole('button', { name: 'Check for updates' })
+  await checkUpdates.scrollIntoViewIfNeeded()
+  await expect(checkUpdates).toBeVisible()
+  await checkUpdates.click()
+  await expect(
+    page.getByText(
+      /Checking…|You’re using the latest version\.|An update is ready\.|Couldn’t check for updates/i,
+    ),
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Show technical details' }).click()
+  await expect(
+    page.getByRole('button', { name: 'Copy diagnostics' }),
+  ).toBeVisible()
+})
+
 test('rejects empty and duplicate animal names from main screen', async ({
   page,
 }) => {
@@ -164,29 +213,19 @@ test('rejects empty and duplicate animal names from main screen', async ({
   })
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Litter Log' })).toBeVisible()
-  const installBanner = page.locator('.install-banner')
-  if (await installBanner.isVisible().catch(() => false)) {
-    await installBanner.getByRole('button', { name: 'Dismiss' }).click()
-    await expect(installBanner).toHaveCount(0)
-  }
-
   await expect(page.getByRole('radio', { name: 'Cleo' })).toBeVisible()
-  await page.locator('.animal-add-btn').click()
-  const addSheet = page.getByRole('dialog', { name: 'Add animal' })
-  await expect(addSheet).toBeVisible()
+  await dismissInstallBanner(page)
+
+  const addSheet = await openAddAnimalSheet(page)
   await addSheet
     .getByRole('button', { name: 'Add animal', exact: true })
-    .click({
-      force: true,
-    })
+    .click()
   await expect(addSheet.getByText(/empty/i)).toBeVisible()
 
   await addSheet.getByLabel('Animal name').fill('cleo')
   await addSheet
     .getByRole('button', { name: 'Add animal', exact: true })
-    .click({
-      force: true,
-    })
+    .click()
   await expect(addSheet.getByText(/already used/i)).toBeVisible()
   await expect(addSheet).toBeVisible()
 })

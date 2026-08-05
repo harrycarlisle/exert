@@ -23,6 +23,7 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
     todaySummary,
     recentEvents,
     animals,
+    loading,
     loadError,
     canLog,
     setScreen,
@@ -40,6 +41,7 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
   const animalName = selectedAnimal?.name ?? 'Animal'
   const summaryPrefix = `${animalName} today`
   const hasAnimals = selectableAnimals.length > 0
+  const showLiveData = !loading && !loadError
 
   return (
     <section className="home-screen">
@@ -68,7 +70,13 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
         </div>
       </header>
 
-      {loadError ? (
+      {loading ? (
+        <div className="data-loading" aria-busy="true" aria-live="polite">
+          <p className="muted">Loading…</p>
+        </div>
+      ) : null}
+
+      {!loading && loadError ? (
         <div className="storage-notice" role="alert">
           <p>{loadError}</p>
           <button
@@ -81,7 +89,7 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
         </div>
       ) : null}
 
-      {!loadError && hasAnimals ? (
+      {showLiveData && hasAnimals ? (
         <AnimalSelector
           animals={selectableAnimals}
           selectedId={selectedAnimalId}
@@ -90,7 +98,7 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
         />
       ) : null}
 
-      {!loadError && !hasAnimals ? (
+      {showLiveData && !hasAnimals ? (
         <div className="empty-animals">
           <p>Add an animal to start logging.</p>
           <button
@@ -103,7 +111,7 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
         </div>
       ) : null}
 
-      {hasAnimals ? (
+      {showLiveData && hasAnimals ? (
         <div className="logging">
           <div className="logging-row">
             <LogButton type="pee" onLog={log} disabled={!canLog} />
@@ -113,7 +121,7 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
         </div>
       ) : null}
 
-      {hasAnimals ? (
+      {showLiveData && hasAnimals ? (
         <div className="card summary-card" aria-live="polite">
           <p className="summary-title">
             {formatTodaySummary(todaySummary, summaryPrefix)}
@@ -128,7 +136,7 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
         </div>
       ) : null}
 
-      {recentEvents.length > 0 ? (
+      {showLiveData && recentEvents.length > 0 ? (
         <>
           <div className="section-head">
             <h2>Recent</h2>
