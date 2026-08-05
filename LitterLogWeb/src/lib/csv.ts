@@ -1,5 +1,6 @@
-import type { BathroomEvent } from '../models/types'
+import type { Animal, BathroomEvent } from '../models/types'
 import { EVENT_META } from '../models/types'
+import { resolveAnimalName } from './animals'
 import { formatDate, formatTime, parseISO } from './dates'
 
 export function escapeCsvField(field: string): string {
@@ -8,8 +9,13 @@ export function escapeCsvField(field: string): string {
   return `"${field.replace(/"/g, '""')}"`
 }
 
-export function eventsToCsv(events: BathroomEvent[]): string {
+export function eventsToCsv(
+  events: BathroomEvent[],
+  animals: Animal[] = [],
+): string {
   const header = [
+    'animal_id',
+    'animal_name',
     'Date',
     'Time',
     'ISO 8601 Timestamp',
@@ -25,6 +31,8 @@ export function eventsToCsv(events: BathroomEvent[]): string {
     const date = parseISO(event.timestamp)
     lines.push(
       [
+        event.animalId,
+        resolveAnimalName(animals, event.animalId, ''),
         formatDate(date, undefined, 'short'),
         formatTime(date),
         event.timestamp,

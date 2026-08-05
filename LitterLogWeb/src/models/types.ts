@@ -4,8 +4,23 @@ export type EventSource = 'web-app'
 
 export type AppearancePreference = 'system' | 'light' | 'dark'
 
+export interface Animal {
+  id: string
+  name: string
+  /** Optional profile color (CSS color string). */
+  color?: string | null
+  createdAt: string
+  archived: boolean
+  displayOrder?: number | null
+  /** System profiles such as Unassigned are not shown in the logging selector. */
+  isSystem?: boolean
+  schemaVersion: number
+}
+
 export interface BathroomEvent {
   id: string
+  /** Stable animal profile id — never rely on display name alone. */
+  animalId: string
   type: BathroomEventType
   /** Exact event time as ISO 8601 string (machine-readable). */
   timestamp: string
@@ -17,7 +32,7 @@ export interface BathroomEvent {
 }
 
 export interface AppSettings {
-  catName: string
+  selectedAnimalId: string | null
   vetPhoneNumber: string
   hapticsEnabled: boolean
   appearance: AppearancePreference
@@ -26,6 +41,8 @@ export interface AppSettings {
   backupReminderDismissed: boolean
   installPromptDismissed: boolean
   schemaVersion: number
+  /** Legacy field retained only while reading older backups / local rows. */
+  catName?: string
 }
 
 export interface TodaySummary {
@@ -39,16 +56,32 @@ export interface LitterLogBackup {
   format: 'litter-log-backup'
   schemaVersion: number
   createdAt: string
+  animals: Animal[]
   events: BathroomEvent[]
   settings: AppSettings
 }
 
-export const CURRENT_EVENT_SCHEMA = 1
-export const CURRENT_SETTINGS_SCHEMA = 1
-export const CURRENT_BACKUP_SCHEMA = 1
+export const CURRENT_EVENT_SCHEMA = 2
+export const CURRENT_SETTINGS_SCHEMA = 2
+export const CURRENT_BACKUP_SCHEMA = 2
+export const CURRENT_ANIMAL_SCHEMA = 1
+
+export const UNASSIGNED_ANIMAL_ID = 'animal_unassigned'
+export const UNASSIGNED_ANIMAL_NAME = 'Unassigned'
+
+export const SEED_ANIMAL_NAMES = ['Cleo', 'Bower'] as const
+
+export const ANIMAL_COLOR_OPTIONS = [
+  '#2E6F73',
+  '#C9A227',
+  '#8B5E3C',
+  '#C47865',
+  '#5B7C99',
+  '#6B8F71',
+] as const
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  catName: '',
+  selectedAnimalId: null,
   vetPhoneNumber: '',
   hapticsEnabled: true,
   appearance: 'system',
@@ -90,3 +123,11 @@ export const SAFETY_MESSAGE =
 
 export const PRIVACY_STATEMENT =
   'Your litter records are stored locally on this device. Litter Log does not create an account, track your activity, or upload your records. Records leave your device only when you intentionally export or share them.'
+
+/** User-facing copy when persistence fails while saving an entry. */
+export const STORAGE_SAVE_ERROR =
+  'Litter Log couldn’t access storage on this device. Your entry wasn’t saved.'
+
+/** User-facing copy when storage cannot be opened for reading. */
+export const STORAGE_LOAD_ERROR =
+  'Litter Log couldn’t access storage on this device.'

@@ -3,16 +3,18 @@ import { calculateTodaySummary, formatTodaySummary, pluralize } from './summary'
 import type { BathroomEvent } from '../models/types'
 
 function event(
-  partial: Partial<BathroomEvent> & Pick<BathroomEvent, 'type' | 'timestamp'>,
+  partial: Partial<BathroomEvent> &
+    Pick<BathroomEvent, 'type' | 'timestamp' | 'animalId'>,
 ): BathroomEvent {
   return {
     id: partial.id ?? crypto.randomUUID(),
+    animalId: partial.animalId,
     type: partial.type,
     timestamp: partial.timestamp,
     createdAt: partial.createdAt ?? partial.timestamp,
     note: partial.note ?? null,
     source: 'web-app',
-    schemaVersion: 1,
+    schemaVersion: 2,
   }
 }
 
@@ -29,37 +31,53 @@ describe('summary language', () => {
       }),
     ).toBe('Today: 1 pee · 1 poo · 1 attempt')
     expect(
-      formatTodaySummary({
-        peeCount: 3,
-        pooCount: 2,
-        triedCount: 0,
-        mostRecentTimestamp: null,
-      }),
-    ).toBe('Today: 3 pees · 2 poos · 0 attempts')
+      formatTodaySummary(
+        {
+          peeCount: 2,
+          pooCount: 1,
+          triedCount: 0,
+          mostRecentTimestamp: null,
+        },
+        'Cleo today',
+      ),
+    ).toBe('Cleo today: 2 pees · 1 poo · 0 attempts')
   })
 
-  it('uses calendar day boundaries', () => {
+  it('uses calendar day boundaries and selected animal', () => {
     const now = new Date(2026, 7, 4, 15, 0, 0)
     const events = [
       event({
+        animalId: 'cleo',
         type: 'pee',
         timestamp: new Date(2026, 7, 4, 0, 5).toISOString(),
       }),
       event({
+        animalId: 'cleo',
         type: 'pee',
         timestamp: new Date(2026, 7, 4, 23, 50).toISOString(),
       }),
-      event({ type: 'poo', timestamp: new Date(2026, 7, 4, 12).toISOString() }),
       event({
+        animalId: 'bower',
+        type: 'poo',
+        timestamp: new Date(2026, 7, 4, 12).toISOString(),
+      }),
+      event({
+        animalId: 'cleo',
         type: 'triedToPee',
         timestamp: new Date(2026, 7, 4, 14).toISOString(),
       }),
-      event({ type: 'pee', timestamp: new Date(2026, 7, 3, 12).toISOString() }),
+      event({
+        animalId: 'cleo',
+        type: 'pee',
+        timestamp: new Date(2026, 7, 3, 12).toISOString(),
+      }),
     ]
-    const summary = calculateTodaySummary(events, now)
-    expect(summary.peeCount).toBe(2)
-    expect(summary.pooCount).toBe(1)
-    expect(summary.triedCount).toBe(1)
-    expect(summary.mostRecentTimestamp).toBe(events[1].timestamp)
+    const cleoSummary = calculateTodaySummary(events, now, 'cleo')
+    expect(cleoSummary.peeCount).toBe(2)
+    expect(cleoSummary.pooCount).toBe(0)
+    expect(cleoSummary.triedCount).toBe(1)
+    const bowerSummary = calculateTodaySummary(events, now, 'bower')
+    expect(bowerSummary.pooCount).toBe(1)
+    expect(bowerSummary.peeCount).toBe(0)
   })
 })

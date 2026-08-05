@@ -4,11 +4,12 @@ import { EventGlyph, NoteIcon } from './Icons'
 
 interface Props {
   event: BathroomEvent
+  animalName?: string
   onEdit?: (event: BathroomEvent) => void
   onDelete?: (event: BathroomEvent) => void
 }
 
-export function EventRow({ event, onEdit, onDelete }: Props) {
+export function EventRow({ event, animalName, onEdit, onDelete }: Props) {
   const date = parseISO(event.timestamp)
   const time = formatTime(date)
   const when = isSameLocalDay(date, new Date())
@@ -25,6 +26,7 @@ export function EventRow({ event, onEdit, onDelete }: Props) {
         <strong>{label}</strong>
         <span>
           {when}
+          {animalName ? ` · ${animalName}` : ''}
           {event.note ? (
             <>
               {' '}
@@ -41,7 +43,7 @@ export function EventRow({ event, onEdit, onDelete }: Props) {
             type="button"
             className="text-btn"
             onClick={() => onEdit(event)}
-            aria-label={`Edit ${label} at ${when}`}
+            aria-label={`Edit ${label} for ${animalName ?? 'animal'} at ${when}`}
           >
             Edit
           </button>
@@ -51,7 +53,7 @@ export function EventRow({ event, onEdit, onDelete }: Props) {
             type="button"
             className="text-btn"
             onClick={() => onDelete(event)}
-            aria-label={`Delete ${label} at ${when}`}
+            aria-label={`Delete ${label} for ${animalName ?? 'animal'} at ${when}`}
           >
             Delete
           </button>

@@ -7,6 +7,7 @@ import {
   parseISO,
 } from '../lib/dates'
 import { csvFilename, eventsToCsv } from '../lib/csv'
+import { resolveAnimalName } from '../lib/animals'
 import { shareOrDownloadFile } from '../lib/share'
 import type { LitterLogState } from '../state/useLitterLog'
 import type { BathroomEvent, BathroomEventType } from '../models/types'
@@ -19,14 +20,40 @@ interface Props {
 }
 
 export function HistoryScreen({ state, onDeleteRequest }: Props) {
-  const { events, setScreen, setEditorMode, setEditorEvent, setStatus } = state
+  const {
+    events,
+    animals,
+    setScreen,
+    setEditorMode,
+    setEditorEvent,
+    setStatus,
+  } = state
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+  const [animalFilter, setAnimalFilter] = useState<string>('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+
+  const animalFilters = useMemo(() => {
+    const idsWithHistory = new Set(events.map((event) => event.animalId))
+    return animals
+      .filter(
+        (animal) =>
+          !animal.archived || idsWithHistory.has(animal.id) || animal.isSystem,
+      )
+      .sort((a, b) => {
+        if (a.archived !== b.archived) return a.archived ? 1 : -1
+        const orderA = a.displayOrder ?? Number.MAX_SAFE_INTEGER
+        const orderB = b.displayOrder ?? Number.MAX_SAFE_INTEGER
+        if (orderA !== orderB) return orderA - orderB
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      })
+  }, [animals, events])
 
   const filtered = useMemo(() => {
     return events.filter((event) => {
       if (typeFilter !== 'all' && event.type !== typeFilter) return false
+      if (animalFilter !== 'all' && event.animalId !== animalFilter)
+        return false
       const date = parseISO(event.timestamp)
       if (startDate) {
         const start = new Date(`${startDate}T00:00:00`)
@@ -38,7 +65,7 @@ export function HistoryScreen({ state, onDeleteRequest }: Props) {
       }
       return true
     })
-  }, [events, typeFilter, startDate, endDate])
+  }, [events, typeFilter, animalFilter, startDate, endDate])
 
   const groups = useMemo(() => {
     const map = new Map<string, BathroomEvent[]>()
@@ -64,11 +91,14 @@ export function HistoryScreen({ state, onDeleteRequest }: Props) {
   }, [filtered])
 
   const filtersActive =
-    typeFilter !== 'all' || Boolean(startDate) || Boolean(endDate)
+    typeFilter !== 'all' ||
+    animalFilter !== 'all' ||
+    Boolean(startDate) ||
+    Boolean(endDate)
 
   async function exportCsv() {
     try {
-      const csv = eventsToCsv(filtered)
+      const csv = eventsToCsv(filtered, animals)
       const file = new File([csv], csvFilename(), {
         type: 'text/csv;charset=utf-8',
       })
@@ -92,7 +122,9 @@ export function HistoryScreen({ state, onDeleteRequest }: Props) {
           <p className="subtitle">
             {events.length === 0
               ? 'No records yet'
-              : `${events.length} total · showing ${filtered.length}`}
+              : animalFilter === 'all'
+                ? `${events.length} total · showing ${filtered.length}`
+                : `${resolveAnimalName(animals, animalFilter)} · showing ${filtered.length}`}
           </p>
         </div>
         <button
@@ -103,6 +135,29 @@ export function HistoryScreen({ state, onDeleteRequest }: Props) {
           Back
         </button>
       </header>
+
+      <div className="chip-row" role="group" aria-label="Animal filter">
+        <button
+          type="button"
+          className="chip"
+          aria-pressed={animalFilter === 'all'}
+          onClick={() => setAnimalFilter('all')}
+        >
+          All animals
+        </button>
+        {animalFilters.map((animal) => (
+          <button
+            key={animal.id}
+            type="button"
+            className="chip"
+            aria-pressed={animalFilter === animal.id}
+            onClick={() => setAnimalFilter(animal.id)}
+          >
+            {animal.name}
+            {animal.archived ? ' (archived)' : ''}
+          </button>
+        ))}
+      </div>
 
       <div className="chip-row" role="group" aria-label="Event type filter">
         {(
@@ -148,6 +203,7 @@ export function HistoryScreen({ state, onDeleteRequest }: Props) {
             className="btn btn-secondary"
             onClick={() => {
               setTypeFilter('all')
+              setAnimalFilter('all')
               setStartDate('')
               setEndDate('')
             }}
@@ -187,7 +243,7 @@ export function HistoryScreen({ state, onDeleteRequest }: Props) {
       ) : filtered.length === 0 ? (
         <div className="card empty">
           Nothing matches the current filters. Your history is still saved — try
-          All or a wider date range.
+          All animals or a wider date range.
         </div>
       ) : (
         groups.map((group) => (
@@ -199,6 +255,7 @@ export function HistoryScreen({ state, onDeleteRequest }: Props) {
                   <EventRow
                     key={event.id}
                     event={event}
+                    animalName={resolveAnimalName(animals, event.animalId)}
                     onEdit={(item) => {
                       setEditorEvent(item)
                       setEditorMode('edit')

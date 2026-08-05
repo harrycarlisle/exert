@@ -180,6 +180,7 @@ export default function App() {
           status={state.status}
           onUndo={() => void state.undo()}
           onRetry={(type) => void state.log(type)}
+          onRetryLoad={() => void state.retryStorage()}
           onDismiss={() => state.setStatus(null)}
         />
       ) : null}
@@ -188,6 +189,8 @@ export default function App() {
         <EventEditor
           mode={state.editorMode}
           initial={state.editorEvent}
+          animals={state.animals}
+          defaultAnimalId={state.selectedAnimalId}
           onCancel={() => {
             state.setEditorMode(null)
             state.setEditorEvent(null)

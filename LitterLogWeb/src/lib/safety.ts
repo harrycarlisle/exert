@@ -14,8 +14,12 @@ export function shouldShowSafetyNotice(
 ): boolean {
   if (event.type !== 'triedToPee') return false
 
+  const animalEvents = allEvents.filter(
+    (item) => item.animalId === event.animalId,
+  )
+
   if (!settings.lastSafetyWarningAt) {
-    return allEvents.some((e) => e.type === 'triedToPee')
+    return animalEvents.some((e) => e.type === 'triedToPee')
   }
 
   const lastWarning = parseISO(settings.lastSafetyWarningAt).getTime()
@@ -23,7 +27,7 @@ export function shouldShowSafetyNotice(
   if (nowMs - lastWarning < MIN_COOLDOWN_MS) return false
 
   const windowStart = nowMs - REPEAT_WINDOW_MS
-  const recentAttempts = allEvents.filter((e) => {
+  const recentAttempts = animalEvents.filter((e) => {
     if (e.type !== 'triedToPee') return false
     const t = parseISO(e.timestamp).getTime()
     return t >= windowStart && t <= nowMs

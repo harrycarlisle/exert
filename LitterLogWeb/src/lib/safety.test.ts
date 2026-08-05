@@ -2,15 +2,20 @@ import { describe, expect, it } from 'vitest'
 import { shouldShowSafetyNotice } from './safety'
 import { DEFAULT_SETTINGS, type BathroomEvent } from '../models/types'
 
-function tried(id: string, timestamp: string): BathroomEvent {
+function tried(
+  id: string,
+  timestamp: string,
+  animalId = 'cleo',
+): BathroomEvent {
   return {
     id,
+    animalId,
     type: 'triedToPee',
     timestamp,
     createdAt: timestamp,
     note: null,
     source: 'web-app',
-    schemaVersion: 1,
+    schemaVersion: 2,
   }
 }
 
@@ -30,12 +35,13 @@ describe('safety notice throttling', () => {
   it('does not show for pee', () => {
     const event: BathroomEvent = {
       id: '1',
+      animalId: 'cleo',
       type: 'pee',
       timestamp: '2026-08-04T12:00:00.000Z',
       createdAt: '2026-08-04T12:00:00.000Z',
       note: null,
       source: 'web-app',
-      schemaVersion: 1,
+      schemaVersion: 2,
     }
     expect(shouldShowSafetyNotice(event, [event], DEFAULT_SETTINGS)).toBe(false)
   })
@@ -51,6 +57,27 @@ describe('safety notice throttling', () => {
       shouldShowSafetyNotice(
         event,
         [event, tried('1', '2026-08-04T11:50:00.000Z')],
+        settings,
+        now,
+      ),
+    ).toBe(false)
+  })
+
+  it('counts attempted pees per animal', () => {
+    const now = new Date('2026-08-04T12:00:00.000Z')
+    const event = tried('3', now.toISOString(), 'cleo')
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      lastSafetyWarningAt: '2026-08-03T12:00:00.000Z',
+    }
+    expect(
+      shouldShowSafetyNotice(
+        event,
+        [
+          event,
+          tried('1', '2026-08-04T11:00:00.000Z', 'bower'),
+          tried('2', '2026-08-04T11:30:00.000Z', 'bower'),
+        ],
         settings,
         now,
       ),
