@@ -145,11 +145,19 @@ a {
   font-size: 0.92rem;
 }
 
+.animal-selector-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
 .animal-selector {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 0 0 10px;
+  flex: 1;
+  min-width: 0;
 }
 
 .animal-pill {
@@ -170,6 +178,45 @@ a {
     background 120ms ease,
     border-color 120ms ease,
     color 120ms ease;
+}
+
+.animal-add-btn {
+  flex: 0 0 48px;
+  width: 48px;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 1.45rem;
+  font-weight: 500;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.animal-add-btn:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.empty-animals {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  margin: 8px 0 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+}
+
+.empty-animals p {
+  margin: 0;
+  color: var(--text-secondary);
+  text-align: center;
 }
 
 .animal-pill[aria-checked='true'] {
@@ -257,9 +304,9 @@ a {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-weight: 650;
-  font-size: 1.02rem;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.98rem;
   border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
   box-shadow: none;
   transition: transform 120ms ease;
@@ -271,13 +318,39 @@ a {
   height: min(34vw, 116px);
   min-width: 100px;
   min-height: 100px;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   border-radius: 24px;
 }
 
+.log-btn.tried.wide {
+  width: 100%;
+  max-width: 280px;
+  height: 72px;
+  min-height: 72px;
+  flex-direction: row;
+  gap: 10px;
+  border-radius: 20px;
+}
+
 .log-btn .glyph {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
+}
+
+.log-btn.tried.wide .glyph {
+  width: 30px;
+  height: 30px;
+}
+
+.log-btn-label {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.log-btn.disabled,
+.log-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .log-btn.pee {
@@ -531,17 +604,24 @@ a {
 
 .banner {
   position: sticky;
-  bottom: calc(12px + var(--safe-bottom));
-  margin-top: 16px;
+  bottom: calc(10px + var(--safe-bottom));
+  margin-top: 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
   border: 1px solid var(--border);
   backdrop-filter: blur(10px);
-  box-shadow: var(--shadow);
+}
+
+.banner.toast {
+  box-shadow: 0 4px 16px rgba(31, 36, 33, 0.1);
+}
+
+.banner.success {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
 }
 
 .banner.error {
@@ -550,7 +630,14 @@ a {
 
 .banner .message {
   flex: 1;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.diagnostics-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .empty {

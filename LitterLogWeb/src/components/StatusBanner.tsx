@@ -1,5 +1,8 @@
+import { useEffect } from 'react'
 import type { StatusBanner as Banner } from '../state/useLitterLog'
 import type { BathroomEventType } from '../models/types'
+
+const SUCCESS_DISMISS_MS = 4200
 
 interface Props {
   status: Banner
@@ -16,9 +19,17 @@ export function StatusBanner({
   onRetryLoad,
   onDismiss,
 }: Props) {
+  useEffect(() => {
+    if (status.kind !== 'success') return
+    const timer = window.setTimeout(() => {
+      onDismiss()
+    }, SUCCESS_DISMISS_MS)
+    return () => window.clearTimeout(timer)
+  }, [status, onDismiss])
+
   return (
     <div
-      className={`banner ${status.kind === 'error' ? 'error' : ''}`}
+      className={`banner toast ${status.kind === 'error' ? 'error' : 'success'}`}
       role="status"
       aria-live="polite"
     >

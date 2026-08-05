@@ -5,14 +5,21 @@ interface Props {
   type: BathroomEventType
   onLog: (type: BathroomEventType) => void
   compact?: boolean
+  disabled?: boolean
 }
 
-export function LogButton({ type, onLog, compact = false }: Props) {
+export function LogButton({
+  type,
+  onLog,
+  compact = false,
+  disabled = false,
+}: Props) {
   const meta = EVENT_META[type]
   const className = [
     'log-btn',
     type === 'triedToPee' ? 'tried' : type,
-    compact ? 'tried' : '',
+    compact ? 'tried wide' : '',
+    disabled ? 'disabled' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -24,9 +31,10 @@ export function LogButton({ type, onLog, compact = false }: Props) {
       onClick={() => onLog(type)}
       aria-label={meta.label}
       title={meta.description}
+      disabled={disabled}
     >
       <EventGlyph type={type} className="glyph" />
-      <span>{meta.label}</span>
+      <span className="log-btn-label">{meta.label}</span>
     </button>
   )
 }

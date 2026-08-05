@@ -6,12 +6,14 @@ import {
   fetchEvents,
   fetchSettings,
   getLastTechnicalStorageError,
+  probeIndexedDBOpen,
   putAnimal,
   putEvent,
   putManyAnimals,
   putManyEvents,
   recoverStorage,
   requestPersistentStorage,
+  resetLocalLitterLogStorage,
   saveSettings,
   StorageError,
 } from '../db/database'
@@ -330,10 +332,16 @@ export function useLitterLog() {
         displayOrder: maxOrder + 1,
       })
       await putAnimal(animal)
+      const nextSettings = await saveSettings({
+        ...settings,
+        selectedAnimalId: animal.id,
+      })
       setAnimals((prev) => [...prev, animal])
+      setSettings(nextSettings)
+      setAnnounce(`${animal.name} added`)
       return animal
     },
-    [animals],
+    [animals, settings],
   )
 
   const renameAnimal = useCallback(
@@ -501,6 +509,7 @@ export function useLitterLog() {
     try {
       await recoverStorage()
       await refresh()
+      setStatus(null)
     } catch (error) {
       const message =
         error instanceof StorageError ? error.userMessage : STORAGE_LOAD_ERROR
@@ -509,6 +518,23 @@ export function useLitterLog() {
       setLoading(false)
     }
   }, [refresh])
+
+  const runStorageProbe = useCallback(async () => {
+    return probeIndexedDBOpen()
+  }, [])
+
+  const resetLocalStorage = useCallback(async () => {
+    await resetLocalLitterLogStorage()
+    setEvents([])
+    setAnimals([])
+    setSettings(DEFAULT_SETTINGS)
+    setLoadError(null)
+    setStatus(null)
+    setLoading(true)
+    await refresh()
+  }, [refresh])
+
+  const canLog = Boolean(selectedAnimalId) && !loadError
 
   return {
     events,
@@ -534,6 +560,9 @@ export function useLitterLog() {
     setEditorMode,
     refresh,
     retryStorage,
+    runStorageProbe,
+    resetLocalStorage,
+    canLog,
     log,
     selectAnimal,
     undo: undoDeletionOrLast,

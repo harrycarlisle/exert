@@ -9,10 +9,14 @@ export function DropletIcon({ className }: { className?: string }) {
   )
 }
 
-export function CircleIcon({ className }: { className?: string }) {
+/** Simple non-emoji symbol for Poo — rounded mound, not a blank circle. */
+export function PooIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="12" cy="12" r="8" fill="currentColor" />
+      <path
+        fill="currentColor"
+        d="M12 4.2c1.4 0 2.4 1.2 2.2 2.5-.1.6.2 1.1.7 1.4 1.3.7 2.1 2.1 2.1 3.6 0 .4-.1.9-.2 1.3 1.2.6 2 1.8 2 3.2 0 2.1-1.9 3.6-4.3 3.6H9.5C7.1 19.8 5.2 18.3 5.2 16.2c0-1.4.8-2.6 2-3.2-.1-.4-.2-.9-.2-1.3 0-1.5.8-2.9 2.1-3.6.5-.3.8-.8.7-1.4C9.6 5.4 10.6 4.2 12 4.2z"
+      />
     </svg>
   )
 }
@@ -69,6 +73,6 @@ export function EventGlyph({
   className?: string
 }) {
   if (type === 'pee') return <DropletIcon className={className} />
-  if (type === 'poo') return <CircleIcon className={className} />
+  if (type === 'poo') return <PooIcon className={className} />
   return <WarningIcon className={className} />
 }

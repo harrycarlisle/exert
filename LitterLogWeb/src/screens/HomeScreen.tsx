@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { AddAnimalSheet } from '../components/AddAnimalSheet'
 import { AnimalSelector } from '../components/AnimalSelector'
 import { LogButton } from '../components/LogButton'
 import { EventRow } from '../components/EventRow'
@@ -22,17 +24,22 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
     recentEvents,
     animals,
     loadError,
+    canLog,
     setScreen,
     log,
     selectAnimal,
     retryStorage,
+    addAnimal,
+    setStatus,
     setEditorMode,
     setEditorEvent,
   } = state
+  const [showAddAnimal, setShowAddAnimal] = useState(false)
 
   const todayLabel = formatFullDate(new Date())
   const animalName = selectedAnimal?.name ?? 'Animal'
   const summaryPrefix = `${animalName} today`
+  const hasAnimals = selectableAnimals.length > 0
 
   return (
     <section className="home-screen">
@@ -74,32 +81,52 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
         </div>
       ) : null}
 
-      <AnimalSelector
-        animals={selectableAnimals}
-        selectedId={selectedAnimalId}
-        onSelect={(id) => void selectAnimal(id)}
-      />
+      {!loadError && hasAnimals ? (
+        <AnimalSelector
+          animals={selectableAnimals}
+          selectedId={selectedAnimalId}
+          onSelect={(id) => void selectAnimal(id)}
+          onAddAnimal={() => setShowAddAnimal(true)}
+        />
+      ) : null}
 
-      <div className="logging">
-        <div className="logging-row">
-          <LogButton type="pee" onLog={log} />
-          <LogButton type="poo" onLog={log} />
+      {!loadError && !hasAnimals ? (
+        <div className="empty-animals">
+          <p>Add an animal to start logging.</p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setShowAddAnimal(true)}
+          >
+            Add your first animal
+          </button>
         </div>
-        <LogButton type="triedToPee" onLog={log} compact />
-      </div>
+      ) : null}
 
-      <div className="card summary-card" aria-live="polite">
-        <p className="summary-title">
-          {formatTodaySummary(todaySummary, summaryPrefix)}
-        </p>
-        {todaySummary.mostRecentTimestamp ? (
-          <p className="summary-meta">
-            Latest at {formatTime(parseISO(todaySummary.mostRecentTimestamp))}
+      {hasAnimals ? (
+        <div className="logging">
+          <div className="logging-row">
+            <LogButton type="pee" onLog={log} disabled={!canLog} />
+            <LogButton type="poo" onLog={log} disabled={!canLog} />
+          </div>
+          <LogButton type="triedToPee" onLog={log} compact disabled={!canLog} />
+        </div>
+      ) : null}
+
+      {hasAnimals ? (
+        <div className="card summary-card" aria-live="polite">
+          <p className="summary-title">
+            {formatTodaySummary(todaySummary, summaryPrefix)}
           </p>
-        ) : (
-          <p className="summary-meta">Nothing recorded today</p>
-        )}
-      </div>
+          {todaySummary.mostRecentTimestamp ? (
+            <p className="summary-meta">
+              Latest at {formatTime(parseISO(todaySummary.mostRecentTimestamp))}
+            </p>
+          ) : (
+            <p className="summary-meta">Nothing recorded today</p>
+          )}
+        </div>
+      ) : null}
 
       {recentEvents.length > 0 ? (
         <>
@@ -130,6 +157,20 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
             </ul>
           </div>
         </>
+      ) : null}
+
+      {showAddAnimal ? (
+        <AddAnimalSheet
+          onCancel={() => setShowAddAnimal(false)}
+          onAdd={async (name, color) => {
+            const animal = await addAnimal(name, color)
+            setShowAddAnimal(false)
+            setStatus({
+              kind: 'success',
+              message: `${animal.name} added`,
+            })
+          }}
+        />
       ) : null}
     </section>
   )
