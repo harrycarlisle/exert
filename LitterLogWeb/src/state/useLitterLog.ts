@@ -2,15 +2,34 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   deleteAllEvents,
   deleteEvent,
+  fetchAnimals,
   fetchEvents,
   fetchSettings,
+  getLastTechnicalStorageError,
+  putAnimal,
   putEvent,
+  putManyAnimals,
   putManyEvents,
+  recoverStorage,
   requestPersistentStorage,
   saveSettings,
   StorageError,
 } from '../db/database'
-import { createBackup, mergeBackupEvents, parseBackup } from '../lib/backup'
+import {
+  activeAnimals,
+  canArchiveAnimal,
+  createAnimalProfile,
+  nextActiveAnimalId,
+  normalizeAnimalName,
+  resolveAnimalName,
+  validateAnimalName,
+} from '../lib/animals'
+import {
+  createBackup,
+  mergeBackupAnimals,
+  mergeBackupEvents,
+  parseBackup,
+} from '../lib/backup'
 import { TapDebouncer } from '../lib/debounce'
 import {
   playErrorHaptic,
@@ -23,6 +42,9 @@ import { toISO } from '../lib/dates'
 import {
   CURRENT_EVENT_SCHEMA,
   DEFAULT_SETTINGS,
+  STORAGE_LOAD_ERROR,
+  STORAGE_SAVE_ERROR,
+  type Animal,
   type AppSettings,
   type BathroomEvent,
   type BathroomEventType,
@@ -42,10 +64,18 @@ export interface StatusBanner {
   message: string
   undoId?: string
   retryType?: BathroomEventType
+  retryLoad?: boolean
+}
+
+function loggedMessage(type: BathroomEventType, animalName: string): string {
+  if (type === 'pee') return `Pee logged for ${animalName}`
+  if (type === 'poo') return `Poo logged for ${animalName}`
+  return `Tried to pee logged for ${animalName}`
 }
 
 export function useLitterLog() {
   const [events, setEvents] = useState<BathroomEvent[]>([])
+  const [animals, setAnimals] = useState<Animal[]>([])
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [screen, setScreen] = useState<Screen>('home')
   const [loading, setLoading] = useState(true)
@@ -58,20 +88,38 @@ export function useLitterLog() {
   const debouncer = useRef(new TapDebouncer())
   const deletedForUndo = useRef<BathroomEvent | null>(null)
 
+  const selectedAnimalId = settings.selectedAnimalId
+  const selectedAnimal = useMemo(
+    () => animals.find((animal) => animal.id === selectedAnimalId) ?? null,
+    [animals, selectedAnimalId],
+  )
+  const selectableAnimals = useMemo(() => activeAnimals(animals), [animals])
+
   const refresh = useCallback(async () => {
     try {
-      const [nextEvents, nextSettings] = await Promise.all([
+      const [nextEvents, nextSettings, nextAnimals] = await Promise.all([
         fetchEvents(),
         fetchSettings(),
+        fetchAnimals(),
       ])
+      const resolvedSelected = nextActiveAnimalId(
+        nextAnimals,
+        nextSettings.selectedAnimalId,
+      )
+      let settingsToUse = nextSettings
+      if (resolvedSelected !== nextSettings.selectedAnimalId) {
+        settingsToUse = await saveSettings({
+          ...nextSettings,
+          selectedAnimalId: resolvedSelected,
+        })
+      }
       setEvents(nextEvents)
-      setSettings(nextSettings)
+      setAnimals(nextAnimals)
+      setSettings(settingsToUse)
       setLoadError(null)
     } catch (error) {
       const message =
-        error instanceof StorageError
-          ? error.message
-          : 'Could not load litter records.'
+        error instanceof StorageError ? error.userMessage : STORAGE_LOAD_ERROR
       setLoadError(message)
     } finally {
       setLoading(false)
@@ -83,8 +131,15 @@ export function useLitterLog() {
     void requestPersistentStorage()
   }, [refresh])
 
-  const todaySummary = useMemo(() => calculateTodaySummary(events), [events])
-  const recentEvents = useMemo(() => events.slice(0, 5), [events])
+  const todaySummary = useMemo(
+    () => calculateTodaySummary(events, new Date(), selectedAnimalId),
+    [events, selectedAnimalId],
+  )
+  const recentEvents = useMemo(
+    () =>
+      events.filter((event) => event.animalId === selectedAnimalId).slice(0, 5),
+    [events, selectedAnimalId],
+  )
 
   const updateSettings = useCallback(
     async (partial: Partial<AppSettings>) => {
@@ -95,14 +150,35 @@ export function useLitterLog() {
     [settings],
   )
 
+  const selectAnimal = useCallback(
+    async (animalId: string) => {
+      if (animalId === settings.selectedAnimalId) return
+      const animal = animals.find((item) => item.id === animalId)
+      if (!animal || animal.archived || animal.isSystem) return
+      await updateSettings({ selectedAnimalId: animalId })
+    },
+    [animals, settings.selectedAnimalId, updateSettings],
+  )
+
   const log = useCallback(
     async (type: BathroomEventType) => {
-      if (!debouncer.current.shouldAccept(type)) return null
+      const animalId = settings.selectedAnimalId
+      if (!animalId) {
+        const message = 'Select an animal before logging.'
+        setStatus({ kind: 'error', message })
+        setAnnounce(message)
+        return null
+      }
+      if (!debouncer.current.shouldAccept(type, Date.now(), animalId)) {
+        return null
+      }
       playImpactHaptic(settings.hapticsEnabled)
 
+      const animalName = resolveAnimalName(animals, animalId, 'animal')
       const now = new Date()
       const event: BathroomEvent = {
         id: createId(),
+        animalId,
         type,
         timestamp: toISO(now),
         createdAt: toISO(now),
@@ -115,13 +191,7 @@ export function useLitterLog() {
         await putEvent(event)
         const nextEvents = [event, ...events]
         setEvents(nextEvents)
-        const time = now.toLocaleTimeString(undefined, {
-          hour: 'numeric',
-          minute: '2-digit',
-        })
-        const label =
-          type === 'pee' ? 'Pee' : type === 'poo' ? 'Poo' : 'Tried to Pee'
-        const message = `${label} recorded at ${time}`
+        const message = loggedMessage(type, animalName)
         setStatus({ kind: 'success', message, undoId: event.id })
         setAnnounce(message)
         playSuccessHaptic(settings.hapticsEnabled)
@@ -132,16 +202,14 @@ export function useLitterLog() {
         return event
       } catch (error) {
         const message =
-          error instanceof StorageError
-            ? error.message
-            : 'Could not save that entry.'
+          error instanceof StorageError ? error.userMessage : STORAGE_SAVE_ERROR
         setStatus({ kind: 'error', message, retryType: type })
         setAnnounce(message)
         playErrorHaptic(settings.hapticsEnabled)
         return null
       }
     },
-    [events, settings],
+    [animals, events, settings],
   )
 
   const undo = useCallback(async () => {
@@ -150,13 +218,13 @@ export function useLitterLog() {
       const undone = events.find((e) => e.id === status.undoId)
       await deleteEvent(status.undoId)
       setEvents((prev) => prev.filter((e) => e.id !== status.undoId))
-      if (undone) debouncer.current.reset(undone.type)
+      if (undone) debouncer.current.reset(undone.type, undone.animalId)
       setStatus({ kind: 'success', message: 'Entry undone' })
       setAnnounce('Entry undone')
     } catch (error) {
       const message =
         error instanceof StorageError
-          ? error.message
+          ? error.userMessage
           : 'Could not undo that entry.'
       setStatus({ kind: 'error', message })
     }
@@ -170,26 +238,33 @@ export function useLitterLog() {
         const deleted = previous.find((e) => e.id === id) ?? null
         deletedForUndo.current = deleted
         setEvents((prev) => prev.filter((e) => e.id !== id))
+        const animalName = deleted
+          ? resolveAnimalName(animals, deleted.animalId)
+          : null
         setStatus({
           kind: 'success',
-          message: 'Entry deleted',
+          message: animalName
+            ? `Entry deleted for ${animalName}`
+            : 'Entry deleted',
           undoId: deleted?.id,
         })
-        setAnnounce('Entry deleted')
+        setAnnounce(
+          animalName ? `Entry deleted for ${animalName}` : 'Entry deleted',
+        )
       } catch (error) {
         const message =
           error instanceof StorageError
-            ? error.message
+            ? error.userMessage
             : 'Could not delete that entry.'
         setStatus({ kind: 'error', message })
       }
     },
-    [events],
+    [animals, events],
   )
 
   const undoDeletionOrLast = useCallback(async () => {
     const stashed = deletedForUndo.current
-    if (stashed && status?.message === 'Entry deleted') {
+    if (stashed && status?.message.startsWith('Entry deleted')) {
       await putEvent(stashed)
       setEvents((prev) =>
         [stashed, ...prev.filter((e) => e.id !== stashed.id)].sort(
@@ -227,7 +302,7 @@ export function useLitterLog() {
       } catch (error) {
         const message =
           error instanceof StorageError
-            ? error.message
+            ? error.userMessage
             : 'Could not save changes.'
         setStatus({ kind: 'error', message })
       }
@@ -242,30 +317,160 @@ export function useLitterLog() {
     setAnnounce('All history deleted')
   }, [])
 
+  const addAnimal = useCallback(
+    async (name: string, color?: string | null) => {
+      const error = validateAnimalName(name, animals)
+      if (error) throw new Error(error)
+      const maxOrder = animals.reduce(
+        (max, animal) => Math.max(max, animal.displayOrder ?? 0),
+        -1,
+      )
+      const animal = createAnimalProfile(name, {
+        color: color ?? null,
+        displayOrder: maxOrder + 1,
+      })
+      await putAnimal(animal)
+      setAnimals((prev) => [...prev, animal])
+      return animal
+    },
+    [animals],
+  )
+
+  const renameAnimal = useCallback(
+    async (animalId: string, name: string) => {
+      const animal = animals.find((item) => item.id === animalId)
+      if (!animal) throw new Error('Animal not found.')
+      if (animal.isSystem) throw new Error('This profile can’t be renamed.')
+      const error = validateAnimalName(name, animals, { excludeId: animalId })
+      if (error) throw new Error(error)
+      const next = {
+        ...animal,
+        name: normalizeAnimalName(name),
+      }
+      await putAnimal(next)
+      setAnimals((prev) =>
+        prev.map((item) => (item.id === animalId ? next : item)),
+      )
+      return next
+    },
+    [animals],
+  )
+
+  const setAnimalColor = useCallback(
+    async (animalId: string, color: string | null) => {
+      const animal = animals.find((item) => item.id === animalId)
+      if (!animal) throw new Error('Animal not found.')
+      const next = { ...animal, color }
+      await putAnimal(next)
+      setAnimals((prev) =>
+        prev.map((item) => (item.id === animalId ? next : item)),
+      )
+      return next
+    },
+    [animals],
+  )
+
+  const reorderAnimal = useCallback(
+    async (animalId: string, direction: 'up' | 'down') => {
+      const ordered = [...animals].sort((a, b) => {
+        const orderA = a.displayOrder ?? Number.MAX_SAFE_INTEGER
+        const orderB = b.displayOrder ?? Number.MAX_SAFE_INTEGER
+        if (orderA !== orderB) return orderA - orderB
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      })
+      const index = ordered.findIndex((item) => item.id === animalId)
+      if (index < 0) return
+      const swapWith = direction === 'up' ? index - 1 : index + 1
+      if (swapWith < 0 || swapWith >= ordered.length) return
+      const current = ordered[index]
+      const other = ordered[swapWith]
+      if (current.isSystem || other.isSystem) return
+      const currentOrder = current.displayOrder ?? index
+      const otherOrder = other.displayOrder ?? swapWith
+      const nextCurrent = { ...current, displayOrder: otherOrder }
+      const nextOther = { ...other, displayOrder: currentOrder }
+      await putManyAnimals([nextCurrent, nextOther])
+      setAnimals((prev) =>
+        prev.map((item) => {
+          if (item.id === nextCurrent.id) return nextCurrent
+          if (item.id === nextOther.id) return nextOther
+          return item
+        }),
+      )
+    },
+    [animals],
+  )
+
+  const archiveAnimal = useCallback(
+    async (animalId: string) => {
+      if (!canArchiveAnimal(animals, animalId)) {
+        throw new Error('Keep at least one active animal.')
+      }
+      const animal = animals.find((item) => item.id === animalId)
+      if (!animal) throw new Error('Animal not found.')
+      const next = { ...animal, archived: true }
+      await putAnimal(next)
+      const nextAnimals = animals.map((item) =>
+        item.id === animalId ? next : item,
+      )
+      setAnimals(nextAnimals)
+      if (settings.selectedAnimalId === animalId) {
+        const fallback = nextActiveAnimalId(nextAnimals, null)
+        await updateSettings({ selectedAnimalId: fallback })
+      }
+    },
+    [animals, settings.selectedAnimalId, updateSettings],
+  )
+
+  const restoreAnimal = useCallback(
+    async (animalId: string) => {
+      const animal = animals.find((item) => item.id === animalId)
+      if (!animal) throw new Error('Animal not found.')
+      if (animal.isSystem) {
+        throw new Error('System profiles stay in History only.')
+      }
+      const next = { ...animal, archived: false }
+      await putAnimal(next)
+      setAnimals((prev) =>
+        prev.map((item) => (item.id === animalId ? next : item)),
+      )
+    },
+    [animals],
+  )
+
   const importBackupText = useCallback(
     async (text: string) => {
       const backup = parseBackup(JSON.parse(text) as unknown)
+      const animalMerge = mergeBackupAnimals(animals, backup.animals)
       const { merged, imported, skippedDuplicates } = mergeBackupEvents(
         events,
         backup.events,
       )
+      await putManyAnimals(animalMerge.merged)
       await putManyEvents(merged)
       const nextSettings = await saveSettings({
         ...settings,
         ...backup.settings,
-        // Preserve local install/backup reminder prefs unless backup has newer backup stamp.
         installPromptDismissed: settings.installPromptDismissed,
         backupReminderDismissed: settings.backupReminderDismissed,
         lastBackupAt: settings.lastBackupAt,
-        catName: backup.settings.catName || settings.catName,
         vetPhoneNumber:
           backup.settings.vetPhoneNumber || settings.vetPhoneNumber,
+        selectedAnimalId: nextActiveAnimalId(
+          animalMerge.merged,
+          backup.settings.selectedAnimalId ?? settings.selectedAnimalId,
+        ),
       })
+      setAnimals(animalMerge.merged)
       setEvents(merged)
       setSettings(nextSettings)
-      return { imported, skippedDuplicates }
+      return {
+        imported,
+        skippedDuplicates,
+        animalsImported: animalMerge.imported,
+      }
     },
-    [events, settings],
+    [animals, events, settings],
   )
 
   const markBackupExported = useCallback(async () => {
@@ -287,17 +492,36 @@ export function useLitterLog() {
   }, [settings])
 
   const buildBackup = useCallback(
-    () => createBackup(events, settings),
-    [events, settings],
+    () => createBackup(events, settings, animals),
+    [animals, events, settings],
   )
+
+  const retryStorage = useCallback(async () => {
+    setLoading(true)
+    try {
+      await recoverStorage()
+      await refresh()
+    } catch (error) {
+      const message =
+        error instanceof StorageError ? error.userMessage : STORAGE_LOAD_ERROR
+      setLoadError(message)
+    } finally {
+      setLoading(false)
+    }
+  }, [refresh])
 
   return {
     events,
+    animals,
+    selectableAnimals,
+    selectedAnimal,
+    selectedAnimalId,
     settings,
     screen,
     setScreen,
     loading,
     loadError,
+    technicalStorageError: getLastTechnicalStorageError(),
     status,
     setStatus,
     showSafety,
@@ -309,7 +533,9 @@ export function useLitterLog() {
     setEditorEvent,
     setEditorMode,
     refresh,
+    retryStorage,
     log,
+    selectAnimal,
     undo: undoDeletionOrLast,
     remove,
     saveEditor,
@@ -319,6 +545,12 @@ export function useLitterLog() {
     markBackupExported,
     dismissSafety,
     buildBackup,
+    addAnimal,
+    renameAnimal,
+    setAnimalColor,
+    reorderAnimal,
+    archiveAnimal,
+    restoreAnimal,
   }
 }
 

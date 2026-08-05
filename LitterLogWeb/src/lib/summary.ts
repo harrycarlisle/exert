@@ -22,6 +22,7 @@ export function formatTodaySummary(
 export function calculateTodaySummary(
   events: BathroomEvent[],
   now = new Date(),
+  animalId?: string | null,
 ): TodaySummary {
   let peeCount = 0
   let pooCount = 0
@@ -30,6 +31,7 @@ export function calculateTodaySummary(
   let mostRecentMs = -1
 
   for (const event of events) {
+    if (animalId && event.animalId !== animalId) continue
     const date = parseISO(event.timestamp)
     if (!isSameLocalDay(date, now)) continue
     if (event.type === 'pee') peeCount += 1

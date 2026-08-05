@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import {
+  ANIMAL_COLOR_OPTIONS,
   PRIVACY_STATEMENT,
   SAFETY_MESSAGE,
   type AppearancePreference,
@@ -28,6 +29,7 @@ export function SettingsScreen({
   const {
     settings,
     events,
+    animals,
     setScreen,
     updateSettings,
     clearHistory,
@@ -35,14 +37,38 @@ export function SettingsScreen({
     markBackupExported,
     buildBackup,
     setStatus,
+    addAnimal,
+    renameAnimal,
+    setAnimalColor,
+    reorderAnimal,
+    archiveAnimal,
+    restoreAnimal,
+    technicalStorageError,
   } = state
   const fileRef = useRef<HTMLInputElement>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmImport, setConfirmImport] = useState<File | null>(null)
   const [importResult, setImportResult] = useState<string | null>(null)
+  const [newName, setNewName] = useState('')
+  const [animalError, setAnimalError] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
+  const [showDiagnostics, setShowDiagnostics] = useState(false)
+
+  const orderedAnimals = [...animals].sort((a, b) => {
+    if (Boolean(a.isSystem) !== Boolean(b.isSystem)) {
+      return a.isSystem ? 1 : -1
+    }
+    if (a.archived !== b.archived) return a.archived ? 1 : -1
+    const orderA = a.displayOrder ?? Number.MAX_SAFE_INTEGER
+    const orderB = b.displayOrder ?? Number.MAX_SAFE_INTEGER
+    if (orderA !== orderB) return orderA - orderB
+    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+  })
 
   async function exportCsv() {
     try {
-      const file = new File([eventsToCsv(events)], csvFilename(), {
+      const file = new File([eventsToCsv(events, animals)], csvFilename(), {
         type: 'text/csv;charset=utf-8',
       })
       const result = await shareOrDownloadFile(file)
@@ -80,7 +106,7 @@ export function SettingsScreen({
     }
   }
 
-  async function onImportFile(file: File) {
+  async function runImport(file: File) {
     try {
       const text = await readFileAsText(file)
       const result = await importBackupText(text)
@@ -97,6 +123,19 @@ export function SettingsScreen({
             ? error.message
             : 'Could not import that backup.',
       })
+    }
+  }
+
+  async function handleAddAnimal() {
+    try {
+      setAnimalError(null)
+      await addAnimal(newName)
+      setNewName('')
+      setStatus({ kind: 'success', message: 'Animal added' })
+    } catch (error) {
+      setAnimalError(
+        error instanceof Error ? error.message : 'Could not add animal.',
+      )
     }
   }
 
@@ -117,16 +156,203 @@ export function SettingsScreen({
       </header>
 
       <div className="settings-section card">
-        <h2>Cat</h2>
-        <div className="form-field">
-          <span>Cat name (optional)</span>
-          <input
-            value={settings.catName}
-            onChange={(e) => void updateSettings({ catName: e.target.value })}
-            placeholder="e.g. Mochi"
-            autoComplete="off"
-          />
+        <h2>Animals</h2>
+        <ul className="animal-settings-list">
+          {orderedAnimals.map((animal) => (
+            <li key={animal.id} className="animal-settings-row">
+              <div className="animal-settings-main">
+                {editingId === animal.id ? (
+                  <input
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    aria-label={`Rename ${animal.name}`}
+                    autoComplete="off"
+                  />
+                ) : (
+                  <strong>
+                    {animal.name}
+                    {animal.archived ? (
+                      <span className="muted"> · archived</span>
+                    ) : null}
+                    {animal.isSystem ? (
+                      <span className="muted"> · assign via History</span>
+                    ) : null}
+                  </strong>
+                )}
+                {!animal.isSystem ? (
+                  <div
+                    className="color-swatches"
+                    role="group"
+                    aria-label={`Color for ${animal.name}`}
+                  >
+                    {ANIMAL_COLOR_OPTIONS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        className="color-swatch"
+                        style={{ background: color }}
+                        aria-label={`Set color ${color}`}
+                        aria-pressed={animal.color === color}
+                        onClick={() => void setAnimalColor(animal.id, color)}
+                      />
+                    ))}
+                    <button
+                      type="button"
+                      className="text-btn"
+                      onClick={() => void setAnimalColor(animal.id, null)}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="animal-settings-actions">
+                {!animal.isSystem && !animal.archived ? (
+                  <>
+                    <button
+                      type="button"
+                      className="text-btn"
+                      aria-label={`Move ${animal.name} up`}
+                      onClick={() => void reorderAnimal(animal.id, 'up')}
+                    >
+                      Up
+                    </button>
+                    <button
+                      type="button"
+                      className="text-btn"
+                      aria-label={`Move ${animal.name} down`}
+                      onClick={() => void reorderAnimal(animal.id, 'down')}
+                    >
+                      Down
+                    </button>
+                  </>
+                ) : null}
+                {!animal.isSystem ? (
+                  editingId === animal.id ? (
+                    <>
+                      <button
+                        type="button"
+                        className="text-btn"
+                        onClick={() => {
+                          void renameAnimal(animal.id, editingName)
+                            .then(() => {
+                              setEditingId(null)
+                              setAnimalError(null)
+                              setStatus({
+                                kind: 'success',
+                                message: 'Animal renamed',
+                              })
+                            })
+                            .catch((error: unknown) => {
+                              setAnimalError(
+                                error instanceof Error
+                                  ? error.message
+                                  : 'Could not rename.',
+                              )
+                            })
+                        }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        className="text-btn"
+                        onClick={() => setEditingId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-btn"
+                      onClick={() => {
+                        setEditingId(animal.id)
+                        setEditingName(animal.name)
+                      }}
+                    >
+                      Rename
+                    </button>
+                  )
+                ) : null}
+                {!animal.isSystem ? (
+                  animal.archived ? (
+                    <button
+                      type="button"
+                      className="text-btn"
+                      onClick={() =>
+                        void restoreAnimal(animal.id)
+                          .then(() =>
+                            setStatus({
+                              kind: 'success',
+                              message: `${animal.name} restored`,
+                            }),
+                          )
+                          .catch((error: unknown) =>
+                            setAnimalError(
+                              error instanceof Error
+                                ? error.message
+                                : 'Could not restore.',
+                            ),
+                          )
+                      }
+                    >
+                      Restore
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-btn"
+                      onClick={() =>
+                        void archiveAnimal(animal.id)
+                          .then(() =>
+                            setStatus({
+                              kind: 'success',
+                              message: `${animal.name} archived`,
+                            }),
+                          )
+                          .catch((error: unknown) =>
+                            setAnimalError(
+                              error instanceof Error
+                                ? error.message
+                                : 'Could not archive.',
+                            ),
+                          )
+                      }
+                    >
+                      Archive
+                    </button>
+                  )
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <div className="form-field" style={{ marginTop: 12, marginBottom: 0 }}>
+          <span>Add animal</span>
+          <div className="btn-row">
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Name"
+              autoComplete="off"
+              aria-label="New animal name"
+            />
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => void handleAddAnimal()}
+            >
+              Add
+            </button>
+          </div>
         </div>
+        {animalError ? <p className="field-error">{animalError}</p> : null}
+      </div>
+
+      <div className="settings-section card">
+        <h2>Care contacts</h2>
         <div className="form-field">
           <span>Vet phone (optional)</span>
           <input
@@ -210,7 +436,7 @@ export function SettingsScreen({
             hidden
             onChange={(e) => {
               const file = e.target.files?.[0]
-              if (file) void onImportFile(file)
+              if (file) setConfirmImport(file)
               e.target.value = ''
             }}
           />
@@ -218,7 +444,8 @@ export function SettingsScreen({
         {importResult ? <p className="summary-meta">{importResult}</p> : null}
         <p className="muted" style={{ marginTop: 10 }}>
           Browser storage can still be cleared by iOS, Safari, or you. Export a
-          JSON backup regularly so history can be restored.
+          JSON backup regularly so history can be restored. Import merges
+          records and never silently replaces your current history.
         </p>
       </div>
 
@@ -261,11 +488,34 @@ export function SettingsScreen({
         <p>{PRIVACY_STATEMENT}</p>
       </div>
 
+      <div className="settings-section card">
+        <h2>Diagnostics</h2>
+        <button
+          type="button"
+          className="text-btn"
+          onClick={() => setShowDiagnostics((value) => !value)}
+          aria-expanded={showDiagnostics}
+        >
+          {showDiagnostics
+            ? 'Hide technical details'
+            : 'Show technical details'}
+        </button>
+        {showDiagnostics ? (
+          <p className="muted" style={{ marginTop: 8 }}>
+            {technicalStorageError
+              ? technicalStorageError
+              : 'No storage errors recorded in this session.'}
+            {import.meta.env.DEV ? ' · development build' : ''}
+          </p>
+        ) : null}
+      </div>
+
       <div className="settings-section card danger-zone">
         <h2>Delete All History</h2>
         <p>
-          Permanently removes every litter record stored in this browser. This
-          cannot be undone unless you previously exported a JSON backup.
+          Permanently removes every litter record stored in this browser. Animal
+          profiles are kept. This cannot be undone unless you previously
+          exported a JSON backup.
         </p>
         <button
           type="button"
@@ -282,8 +532,8 @@ export function SettingsScreen({
           onClose={() => setConfirmDelete(false)}
         >
           <p>
-            This permanently removes every litter record on this device. This
-            cannot be undone after confirmation.
+            This permanently removes every litter record on this device. Animal
+            profiles stay. This cannot be undone after confirmation.
           </p>
           <div className="btn-row">
             <button
@@ -302,6 +552,38 @@ export function SettingsScreen({
               }}
             >
               Delete everything
+            </button>
+          </div>
+        </Dialog>
+      ) : null}
+
+      {confirmImport ? (
+        <Dialog
+          title="Import this backup?"
+          onClose={() => setConfirmImport(null)}
+        >
+          <p>
+            Import merges animals and events into your current local history. It
+            does not wipe existing records. Duplicate event IDs are skipped.
+          </p>
+          <div className="btn-row">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setConfirmImport(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                const file = confirmImport
+                setConfirmImport(null)
+                void runImport(file)
+              }}
+            >
+              Import and merge
             </button>
           </div>
         </Dialog>

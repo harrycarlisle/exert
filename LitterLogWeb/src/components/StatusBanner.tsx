@@ -5,10 +5,17 @@ interface Props {
   status: Banner
   onUndo: () => void
   onRetry: (type: BathroomEventType) => void
+  onRetryLoad?: () => void
   onDismiss: () => void
 }
 
-export function StatusBanner({ status, onUndo, onRetry, onDismiss }: Props) {
+export function StatusBanner({
+  status,
+  onUndo,
+  onRetry,
+  onRetryLoad,
+  onDismiss,
+}: Props) {
   return (
     <div
       className={`banner ${status.kind === 'error' ? 'error' : ''}`}
@@ -27,7 +34,12 @@ export function StatusBanner({ status, onUndo, onRetry, onDismiss }: Props) {
           className="text-btn"
           onClick={() => onRetry(status.retryType!)}
         >
-          Retry
+          Try again
+        </button>
+      ) : null}
+      {status.kind === 'error' && status.retryLoad && onRetryLoad ? (
+        <button type="button" className="text-btn" onClick={onRetryLoad}>
+          Try again
         </button>
       ) : null}
       <button
