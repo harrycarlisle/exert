@@ -31,6 +31,25 @@ async function openAddAnimalSheet(page: Page) {
   return sheet
 }
 
+async function expandMoreLogging(page: Page) {
+  const disclosure = page.getByRole('button', { name: 'More logging options' })
+  await expect(disclosure).toBeVisible()
+  if ((await disclosure.getAttribute('aria-expanded')) !== 'true') {
+    await disclosure.click()
+  }
+  await expect(disclosure).toHaveAttribute('aria-expanded', 'true')
+  await expect(
+    page.getByRole('button', { name: 'Tried to Pee', exact: true }),
+  ).toBeVisible()
+}
+
+async function openEventActions(page: Page, label: RegExp) {
+  const trigger = page.getByRole('button', { name: label })
+  await expect(trigger).toBeVisible()
+  await trigger.click()
+  return page.getByRole('menu')
+}
+
 test('log, undo, edit, persist across animals', async ({ page }) => {
   await page.addInitScript(() => {
     const key = '__litterLogE2ECleared'
@@ -69,19 +88,28 @@ test('log, undo, edit, persist across animals', async ({ page }) => {
 
   await page.getByRole('radio', { name: 'Cleo' }).click()
 
-  await page.getByRole('button', { name: 'Pee', exact: true }).click()
   await expect(
-    page.getByRole('status').filter({ hasText: /Pee logged for Cleo/i }),
+    page.getByRole('button', { name: 'Tried to Pee', exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: 'More logging options' }),
   ).toBeVisible()
+
+  await page.getByRole('button', { name: 'Pee', exact: true }).click()
+  const peeToast = page.getByTestId('status-toast')
+  await expect(peeToast).toBeVisible()
+  await expect(peeToast).toContainText(/Pee logged for Cleo/i)
+  await expect(page.locator('.toast-layer')).toHaveCSS('position', 'fixed')
   await expect(page.getByRole('heading', { name: 'Recent' })).toBeVisible()
+  await expect(page.getByText('Today · Cleo')).toBeVisible()
+  await expect(page.getByTestId('today-stats')).toContainText('1 Pee')
   await expect(page.locator('.event-row').getByText('Pee')).toBeVisible()
   await expect(page.locator('.event-row').getByText(/Cleo/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Undo' }).click()
-  await expect(
-    page.getByRole('status').filter({ hasText: 'Entry undone' }),
-  ).toBeVisible()
+  await expect(page.getByTestId('status-toast')).toContainText('Entry undone')
   await expect(page.getByRole('heading', { name: 'Recent' })).toHaveCount(0)
+  await expect(page.getByTestId('today-stats')).toContainText('0 Pees')
 
   await page.getByRole('radio', { name: 'Bower' }).click()
   await expect(page.getByRole('radio', { name: 'Bower' })).toHaveAttribute(
@@ -89,17 +117,17 @@ test('log, undo, edit, persist across animals', async ({ page }) => {
     'true',
   )
   await page.getByRole('button', { name: 'Poo', exact: true }).click()
-  await expect(
-    page.getByRole('status').filter({ hasText: /Poo logged for Bower/i }),
-  ).toBeVisible()
+  await expect(page.getByTestId('status-toast')).toContainText(
+    /Poo logged for Bower/i,
+  )
+  await expect(page.getByText('Today · Bower')).toBeVisible()
 
   await page.getByRole('radio', { name: 'Cleo' }).click()
+  await expandMoreLogging(page)
   await page.getByRole('button', { name: 'Tried to Pee', exact: true }).click()
-  await expect(
-    page
-      .getByRole('status')
-      .filter({ hasText: /Tried to pee logged for Cleo/i }),
-  ).toBeVisible()
+  await expect(page.getByTestId('status-toast')).toContainText(
+    /Tried to pee logged for Cleo/i,
+  )
 
   const safetyDialog = page.getByRole('dialog', { name: 'Urinary Safety' })
   await expect(safetyDialog).toBeVisible()
@@ -115,7 +143,8 @@ test('log, undo, edit, persist across animals', async ({ page }) => {
   await expect(page.locator('.event-row')).toHaveCount(1)
   await expect(page.locator('.event-row').getByText('Poo')).toBeVisible()
 
-  await page.getByRole('button', { name: /Edit Poo for Bower/i }).click()
+  const menu = await openEventActions(page, /Actions for Poo logged at/i)
+  await menu.getByRole('menuitem', { name: 'Edit' }).click()
   const editor = page.getByRole('dialog', { name: 'Edit Entry' })
   await expect(editor).toBeVisible()
   await editor.getByRole('combobox', { name: 'Animal' }).selectOption({
@@ -123,9 +152,7 @@ test('log, undo, edit, persist across animals', async ({ page }) => {
   })
   await editor.getByLabel('Note (optional)').fill('Seen by vet')
   await editor.getByRole('button', { name: 'Save' }).click()
-  await expect(
-    page.getByRole('status').filter({ hasText: 'Entry updated' }),
-  ).toBeVisible()
+  await expect(page.getByTestId('status-toast')).toContainText('Entry updated')
   await page.getByRole('button', { name: 'All animals', exact: true }).click()
   await expect(page.getByText('Seen by vet')).toBeVisible()
 
@@ -167,11 +194,16 @@ test('logging controls and animal selector fit without scroll on narrow phone', 
   ).toBeInViewport()
   const pee = page.getByRole('button', { name: 'Pee', exact: true })
   const poo = page.getByRole('button', { name: 'Poo', exact: true })
-  const tried = page.getByRole('button', { name: 'Tried to Pee', exact: true })
+  const more = page.getByRole('button', { name: 'More logging options' })
   await expect(pee).toBeInViewport()
   await expect(poo).toBeInViewport()
-  await expect(tried).toBeInViewport()
-  await expect(page.getByText(/Cleo today:/i)).toBeInViewport()
+  await expect(more).toBeInViewport()
+  await expect(page.getByText('Today · Cleo')).toBeInViewport()
+  await expect(page.getByTestId('today-stats')).toBeInViewport()
+  await expandMoreLogging(page)
+  await expect(
+    page.getByRole('button', { name: 'Tried to Pee', exact: true }),
+  ).toBeInViewport()
 })
 
 test('settings always shows app version and check for updates', async ({
@@ -219,13 +251,16 @@ test('rejects empty and duplicate animal names from main screen', async ({
   const addSheet = await openAddAnimalSheet(page)
   await addSheet
     .getByRole('button', { name: 'Add animal', exact: true })
-    .click()
-  await expect(addSheet.getByText(/empty/i)).toBeVisible()
+    .click({ force: true })
+  await expect(
+    page.getByRole('dialog', { name: 'Add animal' }).getByText(/empty/i),
+  ).toBeVisible()
 
-  await addSheet.getByLabel('Animal name').fill('cleo')
-  await addSheet
+  const sheet = page.getByRole('dialog', { name: 'Add animal' })
+  await sheet.getByLabel('Animal name').fill('cleo')
+  await sheet
     .getByRole('button', { name: 'Add animal', exact: true })
-    .click()
-  await expect(addSheet.getByText(/already used/i)).toBeVisible()
-  await expect(addSheet).toBeVisible()
+    .click({ force: true })
+  await expect(sheet.getByText(/already used/i)).toBeVisible()
+  await expect(sheet).toBeVisible()
 })

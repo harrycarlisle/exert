@@ -1,14 +1,36 @@
-import { useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { AddAnimalSheet } from '../components/AddAnimalSheet'
 import { AnimalSelector } from '../components/AnimalSelector'
 import { LogButton } from '../components/LogButton'
 import { EventRow } from '../components/EventRow'
-import { GearIcon, HistoryIcon } from '../components/Icons'
+import { ChevronIcon, GearIcon, HistoryIcon } from '../components/Icons'
 import { formatFullDate, formatTime, parseISO } from '../lib/dates'
 import { resolveAnimalName } from '../lib/animals'
-import { formatTodaySummary } from '../lib/summary'
+import {
+  formatTodayHeading,
+  formatTodayStat,
+  formatTodaySummary,
+} from '../lib/summary'
 import type { LitterLogState } from '../state/useLitterLog'
 import type { BathroomEvent } from '../models/types'
+
+const MORE_LOGGING_SESSION_KEY = 'litter-log:more-logging-open'
+
+function readMoreLoggingOpen(): boolean {
+  try {
+    return sessionStorage.getItem(MORE_LOGGING_SESSION_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeMoreLoggingOpen(open: boolean): void {
+  try {
+    sessionStorage.setItem(MORE_LOGGING_SESSION_KEY, open ? '1' : '0')
+  } catch {
+    // Session memory is best-effort only.
+  }
+}
 
 interface Props {
   state: LitterLogState
@@ -36,12 +58,27 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
     setEditorEvent,
   } = state
   const [showAddAnimal, setShowAddAnimal] = useState(false)
+  const [moreLoggingOpen, setMoreLoggingOpen] = useState(false)
+  const moreLoggingPanelId = useId()
+
+  useEffect(() => {
+    setMoreLoggingOpen(readMoreLoggingOpen())
+  }, [])
 
   const todayLabel = formatFullDate(new Date())
   const animalName = selectedAnimal?.name ?? 'Animal'
-  const summaryPrefix = `${animalName} today`
   const hasAnimals = selectableAnimals.length > 0
   const showLiveData = !loading && !loadError
+  const summaryHeading = formatTodayHeading(animalName)
+  const summaryAnnouncement = formatTodaySummary(todaySummary, animalName)
+
+  function toggleMoreLogging() {
+    setMoreLoggingOpen((current) => {
+      const next = !current
+      writeMoreLoggingOpen(next)
+      return next
+    })
+  }
 
   return (
     <section className="home-screen">
@@ -117,15 +154,57 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
             <LogButton type="pee" onLog={log} disabled={!canLog} />
             <LogButton type="poo" onLog={log} disabled={!canLog} />
           </div>
-          <LogButton type="triedToPee" onLog={log} compact disabled={!canLog} />
+          <button
+            type="button"
+            className="more-logging-toggle"
+            aria-expanded={moreLoggingOpen}
+            aria-controls={moreLoggingPanelId}
+            onClick={toggleMoreLogging}
+          >
+            <span>More logging options</span>
+            <ChevronIcon direction={moreLoggingOpen ? 'up' : 'down'} />
+          </button>
+          <div
+            id={moreLoggingPanelId}
+            className={`more-logging-panel${moreLoggingOpen ? ' open' : ''}`}
+            hidden={!moreLoggingOpen}
+          >
+            {moreLoggingOpen ? (
+              <LogButton
+                type="triedToPee"
+                onLog={log}
+                compact
+                disabled={!canLog}
+              />
+            ) : null}
+          </div>
         </div>
       ) : null}
 
       {showLiveData && hasAnimals ? (
-        <div className="card summary-card" aria-live="polite">
-          <p className="summary-title">
-            {formatTodaySummary(todaySummary, summaryPrefix)}
-          </p>
+        <div className="card summary-card">
+          <p className="summary-title">{summaryHeading}</p>
+          <div
+            className="today-stats"
+            aria-label={summaryAnnouncement}
+            data-testid="today-stats"
+          >
+            <span
+              className={`today-stat${todaySummary.peeCount === 0 ? ' zero' : ''}`}
+            >
+              {formatTodayStat(todaySummary.peeCount, 'Pee', 'Pees')}
+            </span>
+            <span
+              className={`today-stat${todaySummary.pooCount === 0 ? ' zero' : ''}`}
+            >
+              {formatTodayStat(todaySummary.pooCount, 'Poo', 'Poos')}
+            </span>
+            <span
+              className={`today-stat${todaySummary.triedCount === 0 ? ' zero' : ''}`}
+            >
+              {formatTodayStat(todaySummary.triedCount, 'Tried', 'Tried')}
+            </span>
+          </div>
           {todaySummary.mostRecentTimestamp ? (
             <p className="summary-meta">
               Latest at {formatTime(parseISO(todaySummary.mostRecentTimestamp))}
@@ -142,10 +221,11 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
             <h2>Recent</h2>
             <button
               type="button"
-              className="text-btn"
+              className="history-link"
               onClick={() => setScreen('history')}
             >
-              View All History
+              <span>View All History</span>
+              <ChevronIcon direction="right" />
             </button>
           </div>
           <div className="card recent-card">
