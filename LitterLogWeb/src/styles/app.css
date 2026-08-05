@@ -251,6 +251,19 @@ a {
   font-size: 0.95rem;
 }
 
+.data-loading {
+  margin: 8px 0 16px;
+  padding: 14px 12px;
+  border-radius: 14px;
+  border: 1px dashed var(--border);
+  background: color-mix(in srgb, var(--bg-elevated) 80%, transparent);
+}
+
+.data-loading p {
+  margin: 0;
+  text-align: center;
+}
+
 .icon-btn {
   width: 44px;
   height: 44px;

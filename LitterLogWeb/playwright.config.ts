@@ -15,7 +15,8 @@ export default defineConfig({
     command:
       'BASE_PATH=/ npm run build && npm run preview -- --host 127.0.0.1 --port 4173',
     url: 'http://127.0.0.1:4173',
-    reuseExistingServer: !process.env.CI,
+    // Never reuse: a leftover Pages preview (`/exert/`) breaks root-base e2e runs.
+    reuseExistingServer: false,
     timeout: 180_000,
   },
   projects: [

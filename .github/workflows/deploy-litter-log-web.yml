@@ -47,9 +47,13 @@ jobs:
         run: npm test
 
       - name: Production build for GitHub Pages
+        env:
+          GITHUB_SHA: ${{ github.sha }}
         run: npm run build:pages
 
       - name: Prepare Pages static files
+        env:
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           cp dist/index.html dist/404.html
           touch dist/.nojekyll
@@ -61,6 +65,22 @@ jobs:
           test -f dist/icons/icon-192.png
           test -f dist/icons/icon-512.png
           test -f dist/apple-touch-icon.png
+          test -f dist/version.json
+          echo "version.json:"
+          cat dist/version.json
+          SHORT_SHA="$(printf '%s' "$GITHUB_SHA" | cut -c1-7)"
+          grep -q "$GITHUB_SHA" dist/version.json
+          grep -q "$SHORT_SHA" dist/version.json
+          # version.json must never appear in the Workbox precache URL list.
+          if grep -oE '"url":"[^"]+"' dist/sw.js | grep -q 'version\.json'; then
+            echo "version.json must not be precached by the service worker" >&2
+            exit 1
+          fi
+          # Runtime caching should use NetworkOnly (covers version.json).
+          if ! grep -qi 'NetworkOnly' dist/sw.js; then
+            echo "Expected NetworkOnly runtime caching in sw.js for version.json" >&2
+            exit 1
+          fi
           # Fail if any root-absolute asset paths (missing /exert/) remain in HTML.
           if grep -E ' (src|href)="/(assets|icons|manifest|sw|favicon|apple)' dist/index.html; then
             echo "Found root-absolute asset paths that will break /exert/ hosting" >&2

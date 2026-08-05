@@ -31,23 +31,14 @@ const SETTINGS_KEY = 'app'
 const BLOCKED_WAIT_MS = 2500
 const BLOCKED_RETRY_LIMIT = 2
 
-export class StorageError extends Error {
-  readonly userMessage: string
-  readonly technicalMessage: string
-  readonly errorName: string | null
+import {
+  StorageError,
+  formatDomException,
+  getErrorName,
+  type StorageInitStage,
+} from './storageTypes'
 
-  constructor(
-    userMessage: string,
-    technicalMessage?: string,
-    errorName: string | null = null,
-  ) {
-    super(userMessage)
-    this.name = 'StorageError'
-    this.userMessage = userMessage
-    this.technicalMessage = technicalMessage ?? userMessage
-    this.errorName = errorName
-  }
-}
+export { StorageError, formatDomException, type StorageInitStage }
 
 type IDBFactoryLike = IDBFactory
 
@@ -56,12 +47,21 @@ let cachedDb: IDBDatabase | null = null
 let factoryOverride: IDBFactoryLike | null = null
 let migrationPromise: Promise<void> | null = null
 let lastTechnicalError: string | null = null
+let lastErrorName: string | null = null
+let lastErrorStage: StorageInitStage | null = null
+let initStage: StorageInitStage = 'idle'
 let schemaReadyFor: IDBDatabase | null = null
 /** Temporary bump used only to repair an incomplete schema at the current version. */
 let repairTargetVersion: number | null = null
+let lastIndexedDbApiPresent: boolean | null = null
+let lastIndexedDbOpenSucceeded: boolean | null = null
 
 function targetDbVersion(): number {
   return repairTargetVersion ?? DB_VERSION
+}
+
+function setStage(stage: StorageInitStage): void {
+  initStage = stage
 }
 
 /** Test-only: use a fake/isolated IndexedDB factory. */
@@ -74,37 +74,129 @@ export function getLastTechnicalStorageError(): string | null {
   return lastTechnicalError
 }
 
-export function formatDomException(error: unknown): string {
-  if (error instanceof DOMException || error instanceof Error) {
-    const name = error.name || 'Error'
-    const message = error.message?.trim() || '(no message)'
-    const code =
-      'code' in error && typeof (error as DOMException).code === 'number'
-        ? ` code=${(error as DOMException).code}`
-        : ''
-    return `${name}: ${message}${code}`
+export function getIndexedDbDiagnostics(): {
+  stage: StorageInitStage
+  lastErrorName: string | null
+  lastErrorMessage: string | null
+  lastErrorStage: StorageInitStage | null
+  indexedDbApiPresent: boolean | null
+  indexedDbOpenSucceeded: boolean | null
+  schemaVersion: number | null
+} {
+  return {
+    stage: initStage,
+    lastErrorName,
+    lastErrorMessage: lastTechnicalError,
+    lastErrorStage,
+    indexedDbApiPresent: lastIndexedDbApiPresent,
+    indexedDbOpenSucceeded: lastIndexedDbOpenSucceeded,
+    schemaVersion: cachedDb?.version ?? null,
   }
-  return String(error)
 }
 
-function rememberTechnicalError(error: unknown): void {
+function rememberTechnicalError(
+  error: unknown,
+  stage: StorageInitStage | null = null,
+): void {
   if (error instanceof StorageError) {
+    lastErrorName = error.errorName
+    lastErrorStage = error.stage ?? stage
     lastTechnicalError = error.errorName
       ? `${error.errorName}: ${error.technicalMessage}`
       : error.technicalMessage
+    if (stage) setStage(stage === 'failed' ? 'failed' : stage)
     return
   }
+  lastErrorName = getErrorName(error)
+  lastErrorStage = stage
   lastTechnicalError = formatDomException(error)
 }
 
-function getFactory(): IDBFactoryLike {
-  const factory = factoryOverride ?? globalThis.indexedDB
-  if (!factory) {
-    throw new StorageError(
+/**
+ * Resolve an IndexedDB factory from the real browser globals.
+ * This is detection only — availability still requires a real open().
+ */
+export function resolveIndexedDBFactory(): {
+  factory: IDBFactoryLike | null
+  detectError: StorageError | null
+} {
+  if (factoryOverride) {
+    lastIndexedDbApiPresent = true
+    return { factory: factoryOverride, detectError: null }
+  }
+
+  const candidates: Array<{ label: string; read: () => unknown }> = [
+    {
+      label: 'globalThis.indexedDB',
+      read: () =>
+        typeof globalThis !== 'undefined' ? globalThis.indexedDB : undefined,
+    },
+    {
+      label: 'window.indexedDB',
+      read: () =>
+        typeof window !== 'undefined' ? window.indexedDB : undefined,
+    },
+    {
+      label: 'self.indexedDB',
+      read: () => (typeof self !== 'undefined' ? self.indexedDB : undefined),
+    },
+    {
+      label: 'window.webkitIndexedDB',
+      read: () => {
+        if (typeof window === 'undefined') return undefined
+        return (window as Window & { webkitIndexedDB?: IDBFactory })
+          .webkitIndexedDB
+      },
+    },
+  ]
+
+  const accessErrors: string[] = []
+  for (const candidate of candidates) {
+    try {
+      const value = candidate.read()
+      if (
+        value &&
+        typeof value === 'object' &&
+        typeof (value as IDBFactory).open === 'function'
+      ) {
+        lastIndexedDbApiPresent = true
+        return { factory: value as IDBFactory, detectError: null }
+      }
+    } catch (error) {
+      accessErrors.push(`${candidate.label}: ${formatDomException(error)}`)
+    }
+  }
+
+  lastIndexedDbApiPresent = false
+  const detail =
+    accessErrors.length > 0
+      ? `IndexedDB factory access failed (${accessErrors.join('; ')})`
+      : 'IndexedDB factory missing on window/globalThis/self (no open()).'
+  return {
+    factory: null,
+    detectError: new StorageError(
       STORAGE_LOAD_ERROR,
-      'IndexedDB is not available in this browser.',
+      detail,
       'Unavailable',
-    )
+      'detect',
+    ),
+  }
+}
+
+function getFactory(): IDBFactoryLike {
+  setStage('detect')
+  const { factory, detectError } = resolveIndexedDBFactory()
+  if (!factory) {
+    const error =
+      detectError ??
+      new StorageError(
+        STORAGE_LOAD_ERROR,
+        'IndexedDB factory missing on window/globalThis/self (no open()).',
+        'Unavailable',
+        'detect',
+      )
+    rememberTechnicalError(error, 'detect')
+    throw error
   }
   return factory
 }
@@ -223,7 +315,7 @@ function openAtVersion(version?: number): Promise<IDBDatabase> {
         new StorageError(
           STORAGE_LOAD_ERROR,
           formatDomException(error),
-          error instanceof Error ? error.name : null,
+          getErrorName(error),
         ),
       )
     }
@@ -236,16 +328,35 @@ function openAtVersion(version?: number): Promise<IDBDatabase> {
     }
 
     try {
+      const factory = getFactory()
+      setStage('open')
       request =
         version === undefined
-          ? getFactory().open(DB_NAME)
-          : getFactory().open(DB_NAME, version)
+          ? factory.open(DB_NAME)
+          : factory.open(DB_NAME, version)
     } catch (error) {
-      fail(error)
+      const wrapped =
+        error instanceof StorageError
+          ? error.stage
+            ? error
+            : new StorageError(
+                error.userMessage,
+                error.technicalMessage,
+                error.errorName,
+                error.errorName === 'Unavailable' ? 'detect' : 'open',
+              )
+          : new StorageError(
+              STORAGE_LOAD_ERROR,
+              formatDomException(error),
+              getErrorName(error),
+              'open',
+            )
+      fail(wrapped)
       return
     }
 
     request.onupgradeneeded = () => {
+      setStage('upgrade')
       try {
         const db = request.result
         const tx = request.transaction
@@ -254,11 +365,21 @@ function openAtVersion(version?: number): Promise<IDBDatabase> {
             STORAGE_LOAD_ERROR,
             'InvalidStateError: upgrade transaction missing during onupgradeneeded.',
             'InvalidStateError',
+            'upgrade',
           )
         }
         ensureObjectStores(db, tx)
       } catch (error) {
-        fail(error)
+        fail(
+          error instanceof StorageError
+            ? error
+            : new StorageError(
+                STORAGE_LOAD_ERROR,
+                formatDomException(error),
+                getErrorName(error),
+                'upgrade',
+              ),
+        )
       }
     }
 
@@ -270,6 +391,7 @@ function openAtVersion(version?: number): Promise<IDBDatabase> {
           STORAGE_LOAD_ERROR,
           err ? formatDomException(err) : 'Could not open database.',
           err?.name ?? 'OpenError',
+          'open',
         ),
       )
     }
@@ -281,6 +403,7 @@ function openAtVersion(version?: number): Promise<IDBDatabase> {
             STORAGE_LOAD_ERROR,
             'AbortError: Database upgrade blocked by another open connection.',
             'AbortError',
+            'open',
           ),
         )
       }, BLOCKED_WAIT_MS)
@@ -290,10 +413,13 @@ function openAtVersion(version?: number): Promise<IDBDatabase> {
 
 async function openDatabaseInternal(attempt = 0): Promise<IDBDatabase> {
   const version = targetDbVersion()
+  setStage(attempt === 0 ? 'open' : 'open')
   try {
     const db = await openAtVersion(version)
+    lastIndexedDbOpenSucceeded = true
     return wireDatabase(db)
   } catch (error) {
+    lastIndexedDbOpenSucceeded = false
     const technical = formatDomException(error)
     const errorName =
       error instanceof StorageError
@@ -323,11 +449,7 @@ async function openDatabaseInternal(attempt = 0): Promise<IDBDatabase> {
 
     throw error instanceof StorageError
       ? error
-      : new StorageError(
-          STORAGE_LOAD_ERROR,
-          technical,
-          error instanceof Error ? error.name : null,
-        )
+      : new StorageError(STORAGE_LOAD_ERROR, technical, getErrorName(error))
   }
 }
 
@@ -339,19 +461,59 @@ export async function probeIndexedDBOpen(): Promise<{
   version: number | null
   stores: string[]
   technical: string | null
+  stage: StorageInitStage
+  errorName: string | null
+  apiPresent: boolean | null
 }> {
-  try {
-    await resetDatabaseConnection()
-    const db = await openDatabaseInternal()
-    const stores = [...db.objectStoreNames]
-    const version = db.version
-    return { ok: true, version, stores, technical: null }
-  } catch (error) {
+  const { factory, detectError } = resolveIndexedDBFactory()
+  if (!factory) {
+    rememberTechnicalError(detectError, 'detect')
     return {
       ok: false,
       version: null,
       stores: [],
-      technical: formatDomException(error),
+      technical: detectError?.technicalMessage ?? 'IndexedDB API missing',
+      stage: 'detect',
+      errorName: detectError?.errorName ?? 'Unavailable',
+      apiPresent: false,
+    }
+  }
+
+  try {
+    await resetDatabaseConnection()
+    setStage('open')
+    const db = await openDatabaseInternal()
+    const stores = [...db.objectStoreNames]
+    const version = db.version
+    setStage('ready')
+    return {
+      ok: true,
+      version,
+      stores,
+      technical: null,
+      stage: 'ready',
+      errorName: null,
+      apiPresent: true,
+    }
+  } catch (error) {
+    const storageError =
+      error instanceof StorageError
+        ? error
+        : new StorageError(
+            STORAGE_LOAD_ERROR,
+            formatDomException(error),
+            getErrorName(error),
+            'open',
+          )
+    rememberTechnicalError(storageError, storageError.stage ?? 'open')
+    return {
+      ok: false,
+      version: null,
+      stores: [],
+      technical: storageError.technicalMessage,
+      stage: storageError.stage ?? 'open',
+      errorName: storageError.errorName,
+      apiPresent: true,
     }
   }
 }
@@ -649,7 +811,7 @@ async function ensureAnimalMigration(db: IDBDatabase): Promise<void> {
       : new StorageError(
           STORAGE_LOAD_ERROR,
           formatDomException(error),
-          error instanceof Error ? error.name : null,
+          getErrorName(error),
         )
   })
 
@@ -692,7 +854,7 @@ export async function fetchAnimals(): Promise<Animal[]> {
     throw new StorageError(
       STORAGE_LOAD_ERROR,
       formatDomException(error),
-      error instanceof Error ? error.name : null,
+      getErrorName(error),
     )
   }
 }
@@ -711,7 +873,7 @@ export async function putAnimal(animal: Animal): Promise<Animal> {
     throw new StorageError(
       STORAGE_SAVE_ERROR,
       formatDomException(error),
-      error instanceof Error ? error.name : null,
+      getErrorName(error),
     )
   }
 }
@@ -731,7 +893,7 @@ export async function putManyAnimals(animals: Animal[]): Promise<void> {
     throw new StorageError(
       STORAGE_SAVE_ERROR,
       formatDomException(error),
-      error instanceof Error ? error.name : null,
+      getErrorName(error),
     )
   }
 }
@@ -755,7 +917,7 @@ export async function fetchEvents(): Promise<BathroomEvent[]> {
     throw new StorageError(
       STORAGE_LOAD_ERROR,
       formatDomException(error),
-      error instanceof Error ? error.name : null,
+      getErrorName(error),
     )
   }
 }
@@ -781,7 +943,7 @@ export async function putEvent(event: BathroomEvent): Promise<BathroomEvent> {
     throw new StorageError(
       STORAGE_SAVE_ERROR,
       formatDomException(error),
-      error instanceof Error ? error.name : null,
+      getErrorName(error),
     )
   }
 }
@@ -808,7 +970,7 @@ export async function putManyEvents(events: BathroomEvent[]): Promise<void> {
     throw new StorageError(
       STORAGE_SAVE_ERROR,
       formatDomException(error),
-      error instanceof Error ? error.name : null,
+      getErrorName(error),
     )
   }
 }
@@ -825,7 +987,7 @@ export async function deleteEvent(id: string): Promise<void> {
     throw new StorageError(
       STORAGE_SAVE_ERROR,
       formatDomException(error),
-      error instanceof Error ? error.name : null,
+      getErrorName(error),
     )
   }
 }
@@ -842,7 +1004,7 @@ export async function deleteAllEvents(): Promise<void> {
     throw new StorageError(
       STORAGE_SAVE_ERROR,
       formatDomException(error),
-      error instanceof Error ? error.name : null,
+      getErrorName(error),
     )
   }
 }
@@ -865,7 +1027,7 @@ export async function fetchSettings(): Promise<AppSettings> {
     throw new StorageError(
       STORAGE_LOAD_ERROR,
       formatDomException(error),
-      error instanceof Error ? error.name : null,
+      getErrorName(error),
     )
   }
 }
@@ -887,7 +1049,7 @@ export async function saveSettings(
     throw new StorageError(
       STORAGE_SAVE_ERROR,
       formatDomException(error),
-      error instanceof Error ? error.name : null,
+      getErrorName(error),
     )
   }
 }
@@ -921,6 +1083,7 @@ export async function resetDatabaseConnection(): Promise<void> {
   dbPromise = null
   migrationPromise = null
   schemaReadyFor = null
+  lastIndexedDbOpenSucceeded = null
   // Keep repairTargetVersion across connection resets during an active repair.
 }
 

@@ -190,9 +190,7 @@ export default function App() {
         </div>
       ) : null}
 
-      {state.loading ? (
-        <div className="card empty">Loading Litter Log…</div>
-      ) : state.screen === 'history' ? (
+      {state.screen === 'history' ? (
         <HistoryScreen state={state} onDeleteRequest={setPendingDelete} />
       ) : state.screen === 'settings' ? (
         <SettingsScreen
@@ -200,6 +198,8 @@ export default function App() {
           focusVet={focusVet}
           showInstallHelp={showInstallHelp}
           onShowInstallHelp={() => setShowInstallHelp(true)}
+          needRefresh={needRefresh}
+          onUpdateNow={() => void updateServiceWorker(true)}
         />
       ) : (
         <HomeScreen state={state} onDeleteRequest={setPendingDelete} />
