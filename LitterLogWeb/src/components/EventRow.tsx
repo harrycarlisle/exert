@@ -1,6 +1,7 @@
+import { useEffect, useId, useRef, useState } from 'react'
 import { EVENT_META, type BathroomEvent } from '../models/types'
 import { formatDate, formatTime, isSameLocalDay, parseISO } from '../lib/dates'
-import { EventGlyph, NoteIcon } from './Icons'
+import { EventGlyph, MoreIcon, NoteIcon } from './Icons'
 
 interface Props {
   event: BathroomEvent
@@ -9,6 +10,8 @@ interface Props {
   onDelete?: (event: BathroomEvent) => void
 }
 
+const CLOSE_MENUS_EVENT = 'litter-log:close-event-menus'
+
 export function EventRow({ event, animalName, onEdit, onDelete }: Props) {
   const date = parseISO(event.timestamp)
   const time = formatTime(date)
@@ -16,6 +19,56 @@ export function EventRow({ event, animalName, onEdit, onDelete }: Props) {
     ? time
     : `${formatDate(date, undefined, 'medium')} · ${time}`
   const label = EVENT_META[event.type].label
+  const hasActions = Boolean(onEdit || onDelete)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuId = useId()
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const firstItemRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const onPointerDown = (nativeEvent: PointerEvent) => {
+      const target = nativeEvent.target as Node | null
+      if (
+        menuRef.current?.contains(target) ||
+        triggerRef.current?.contains(target)
+      ) {
+        return
+      }
+      setMenuOpen(false)
+    }
+    const onKeyDown = (nativeEvent: KeyboardEvent) => {
+      if (nativeEvent.key === 'Escape') {
+        nativeEvent.preventDefault()
+        setMenuOpen(false)
+        triggerRef.current?.focus()
+      }
+    }
+    const onCloseOthers = () => setMenuOpen(false)
+
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    window.addEventListener(CLOSE_MENUS_EVENT, onCloseOthers)
+    const focusTimer = window.setTimeout(() => {
+      firstItemRef.current?.focus()
+    }, 0)
+
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener(CLOSE_MENUS_EVENT, onCloseOthers)
+      window.clearTimeout(focusTimer)
+    }
+  }, [menuOpen])
+
+  function openMenu() {
+    window.dispatchEvent(new Event(CLOSE_MENUS_EVENT))
+    setMenuOpen(true)
+  }
+
+  const actionsLabel = `Actions for ${label} logged at ${time}`
 
   return (
     <li className="event-row">
@@ -37,28 +90,66 @@ export function EventRow({ event, animalName, onEdit, onDelete }: Props) {
         </span>
         {event.note ? <span className="event-note">{event.note}</span> : null}
       </div>
-      <div className="event-actions">
-        {onEdit ? (
+      {hasActions ? (
+        <div className="event-actions">
           <button
+            ref={triggerRef}
             type="button"
-            className="text-btn"
-            onClick={() => onEdit(event)}
-            aria-label={`Edit ${label} for ${animalName ?? 'animal'} at ${when}`}
+            className="icon-btn event-menu-trigger"
+            aria-label={actionsLabel}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            aria-controls={menuOpen ? menuId : undefined}
+            onClick={() => {
+              if (menuOpen) {
+                setMenuOpen(false)
+              } else {
+                openMenu()
+              }
+            }}
           >
-            Edit
+            <MoreIcon />
           </button>
-        ) : null}
-        {onDelete ? (
-          <button
-            type="button"
-            className="text-btn"
-            onClick={() => onDelete(event)}
-            aria-label={`Delete ${label} for ${animalName ?? 'animal'} at ${when}`}
-          >
-            Delete
-          </button>
-        ) : null}
-      </div>
+          {menuOpen ? (
+            <div
+              ref={menuRef}
+              id={menuId}
+              className="event-menu"
+              role="menu"
+              aria-label={actionsLabel}
+            >
+              {onEdit ? (
+                <button
+                  ref={firstItemRef}
+                  type="button"
+                  className="event-menu-item"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    onEdit(event)
+                  }}
+                >
+                  Edit
+                </button>
+              ) : null}
+              {onDelete ? (
+                <button
+                  ref={onEdit ? undefined : firstItemRef}
+                  type="button"
+                  className="event-menu-item danger"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    onDelete(event)
+                  }}
+                >
+                  Delete
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </li>
   )
 }

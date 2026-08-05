@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { calculateTodaySummary, formatTodaySummary, pluralize } from './summary'
+import {
+  calculateTodaySummary,
+  formatTodayHeading,
+  formatTodayStat,
+  formatTodaySummary,
+  pluralize,
+} from './summary'
 import type { BathroomEvent } from '../models/types'
 
 function event(
@@ -19,9 +25,13 @@ function event(
 }
 
 describe('summary language', () => {
-  it('handles singular and plural', () => {
+  it('handles singular and plural compact stats', () => {
     expect(pluralize(1, 'pee', 'pees')).toBe('1 pee')
     expect(pluralize(3, 'pee', 'pees')).toBe('3 pees')
+    expect(formatTodayHeading('Bower')).toBe('Today · Bower')
+    expect(formatTodayStat(1, 'Pee', 'Pees')).toBe('1 Pee')
+    expect(formatTodayStat(0, 'Poo', 'Poos')).toBe('0 Poos')
+    expect(formatTodayStat(2, 'Tried', 'Tried')).toBe('2 Tried')
     expect(
       formatTodaySummary({
         peeCount: 1,
@@ -29,7 +39,7 @@ describe('summary language', () => {
         triedCount: 1,
         mostRecentTimestamp: null,
       }),
-    ).toBe('Today: 1 pee · 1 poo · 1 attempt')
+    ).toBe('Today: 1 Pee · 1 Poo · 1 Tried')
     expect(
       formatTodaySummary(
         {
@@ -38,9 +48,9 @@ describe('summary language', () => {
           triedCount: 0,
           mostRecentTimestamp: null,
         },
-        'Cleo today',
+        'Cleo',
       ),
-    ).toBe('Cleo today: 2 pees · 1 poo · 0 attempts')
+    ).toBe('Today · Cleo: 2 Pees · 1 Poo · 0 Tried')
   })
 
   it('uses calendar day boundaries and selected animal', () => {

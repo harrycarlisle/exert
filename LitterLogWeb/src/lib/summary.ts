@@ -9,14 +9,30 @@ export function pluralize(
   return `${count} ${count === 1 ? singular : plural}`
 }
 
+export function formatTodayHeading(animalName: string): string {
+  return `Today · ${animalName}`
+}
+
+export function formatTodayStat(
+  count: number,
+  singular: string,
+  plural: string,
+): string {
+  return pluralize(count, singular, plural)
+}
+
+/** Accessible full-sentence summary for live regions and screen readers. */
 export function formatTodaySummary(
   summary: TodaySummary,
-  prefix = 'Today',
+  animalName = 'Today',
 ): string {
-  const pee = pluralize(summary.peeCount, 'pee', 'pees')
-  const poo = pluralize(summary.pooCount, 'poo', 'poos')
-  const tried = pluralize(summary.triedCount, 'attempt', 'attempts')
-  return `${prefix}: ${pee} · ${poo} · ${tried}`
+  const heading = animalName.startsWith('Today')
+    ? animalName
+    : formatTodayHeading(animalName)
+  const pee = formatTodayStat(summary.peeCount, 'Pee', 'Pees')
+  const poo = formatTodayStat(summary.pooCount, 'Poo', 'Poos')
+  const tried = formatTodayStat(summary.triedCount, 'Tried', 'Tried')
+  return `${heading}: ${pee} · ${poo} · ${tried}`
 }
 
 export function calculateTodaySummary(

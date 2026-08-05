@@ -29,7 +29,9 @@ describe('app shell during storage states', () => {
     })
     expect(screen.getByRole('button', { name: /^Pee$/ })).toBeVisible()
     expect(screen.getByRole('button', { name: /^Poo$/ })).toBeVisible()
-    expect(screen.getByRole('button', { name: /^Tried to Pee$/ })).toBeVisible()
+    expect(
+      screen.getByRole('button', { name: 'More logging options' }),
+    ).toBeVisible()
     expect(screen.getByRole('button', { name: 'Add animal' })).toBeVisible()
   })
 

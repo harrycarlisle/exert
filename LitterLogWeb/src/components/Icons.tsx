@@ -65,6 +65,42 @@ export function NoteIcon() {
   )
 }
 
+export function MoreIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="5" r="1.8" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="12" cy="19" r="1.8" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function ChevronIcon({
+  direction = 'down',
+  className,
+}: {
+  direction?: 'down' | 'up' | 'right'
+  className?: string
+}) {
+  const rotation =
+    direction === 'up' ? '180' : direction === 'right' ? '-90' : '0'
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      style={{ transform: `rotate(${rotation}deg)` }}
+    >
+      <path
+        fill="currentColor"
+        d="M6.7 9.3a1 1 0 0 1 1.4 0L12 13.2l3.9-3.9a1 1 0 1 1 1.4 1.4l-4.6 4.6a1 1 0 0 1-1.4 0L6.7 10.7a1 1 0 0 1 0-1.4z"
+      />
+    </svg>
+  )
+}
+
 export function EventGlyph({
   type,
   className,
