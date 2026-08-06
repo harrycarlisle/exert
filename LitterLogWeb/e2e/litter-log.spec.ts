@@ -134,7 +134,9 @@ test('log, undo, edit, persist across animals', async ({ page }) => {
   await page.getByRole('button', { name: 'Vomit', exact: true }).click()
   const vomitPopover = page.getByTestId('vomit-detail-popover')
   await expect(vomitPopover).toBeVisible()
-  await expect(page.getByTestId('status-toast')).toHaveCount(0)
+  // Opening the popover must not persist a Vomit yet (Hairball toast may still be visible).
+  await expect(page.getByTestId('today-stats')).toContainText('0 Vomits')
+  await expect(page.locator('.event-row').getByText('Vomit')).toHaveCount(0)
   await vomitPopover.getByRole('button', { name: 'Grass' }).click()
   await expect(page.getByTestId('status-toast')).toContainText(
     /Vomit logged for Cleo · Grass/i,
