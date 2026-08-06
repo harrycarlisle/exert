@@ -7,7 +7,7 @@ const SUCCESS_DISMISS_MS = 5000
 interface Props {
   status: Banner
   onUndo: () => void
-  onRetry: (type: BathroomEventType) => void
+  onRetry: (type: BathroomEventType, note?: string | null) => void
   onRetryLoad?: () => void
   onDismiss: () => void
 }
@@ -89,7 +89,7 @@ export function StatusBanner({
           <button
             type="button"
             className="toast-action"
-            onClick={() => onRetry(status.retryType!)}
+            onClick={() => onRetry(status.retryType!, status.retryNote)}
           >
             Try again
           </button>

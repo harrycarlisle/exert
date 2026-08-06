@@ -14,6 +14,7 @@ import {
   DEFAULT_SETTINGS,
   STORAGE_LOAD_ERROR,
   STORAGE_SAVE_ERROR,
+  isBathroomEventType,
   type Animal,
   type AppSettings,
   type BathroomEvent,
@@ -112,7 +113,7 @@ function isEvent(value: unknown): value is BathroomEvent {
   return (
     typeof row.id === 'string' &&
     typeof row.animalId === 'string' &&
-    typeof row.type === 'string' &&
+    isBathroomEventType(row.type) &&
     typeof row.timestamp === 'string' &&
     typeof row.createdAt === 'string'
   )

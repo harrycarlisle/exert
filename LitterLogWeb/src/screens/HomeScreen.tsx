@@ -1,8 +1,9 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { AddAnimalSheet } from '../components/AddAnimalSheet'
 import { AnimalSelector } from '../components/AnimalSelector'
 import { LogButton } from '../components/LogButton'
 import { EventRow } from '../components/EventRow'
+import { VomitDetailPopover } from '../components/VomitDetailPopover'
 import { ChevronIcon, GearIcon, HistoryIcon } from '../components/Icons'
 import { formatFullDate, formatTime, parseISO } from '../lib/dates'
 import { resolveAnimalName } from '../lib/animals'
@@ -59,7 +60,9 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
   } = state
   const [showAddAnimal, setShowAddAnimal] = useState(false)
   const [moreLoggingOpen, setMoreLoggingOpen] = useState(false)
+  const [vomitOpen, setVomitOpen] = useState(false)
   const moreLoggingPanelId = useId()
+  const vomitButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     setMoreLoggingOpen(readMoreLoggingOpen())
@@ -78,6 +81,13 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
       writeMoreLoggingOpen(next)
       return next
     })
+  }
+
+  function closeVomitPopover() {
+    setVomitOpen(false)
+    window.setTimeout(() => {
+      vomitButtonRef.current?.focus()
+    }, 0)
   }
 
   return (
@@ -150,9 +160,18 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
 
       {showLiveData && hasAnimals ? (
         <div className="logging">
-          <div className="logging-row">
+          <div className="logging-grid" data-testid="main-logging-grid">
             <LogButton type="pee" onLog={log} disabled={!canLog} />
             <LogButton type="poo" onLog={log} disabled={!canLog} />
+            <LogButton
+              ref={vomitButtonRef}
+              type="vomit"
+              disabled={!canLog}
+              onClick={() => setVomitOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={vomitOpen}
+            />
+            <LogButton type="hairball" onLog={log} disabled={!canLog} />
           </div>
           <button
             type="button"
@@ -181,6 +200,17 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
         </div>
       ) : null}
 
+      <VomitDetailPopover
+        open={vomitOpen}
+        anchorRef={vomitButtonRef}
+        disabled={!canLog}
+        onClose={closeVomitPopover}
+        onLog={async (note) => {
+          const saved = await log('vomit', note)
+          if (saved) closeVomitPopover()
+        }}
+      />
+
       {showLiveData && hasAnimals ? (
         <div className="card summary-card">
           <p className="summary-title">{summaryHeading}</p>
@@ -198,6 +228,20 @@ export function HomeScreen({ state, onDeleteRequest }: Props) {
               className={`today-stat${todaySummary.pooCount === 0 ? ' zero' : ''}`}
             >
               {formatTodayStat(todaySummary.pooCount, 'Poo', 'Poos')}
+            </span>
+            <span
+              className={`today-stat${todaySummary.vomitCount === 0 ? ' zero' : ''}`}
+            >
+              {formatTodayStat(todaySummary.vomitCount, 'Vomit', 'Vomits')}
+            </span>
+            <span
+              className={`today-stat${todaySummary.hairballCount === 0 ? ' zero' : ''}`}
+            >
+              {formatTodayStat(
+                todaySummary.hairballCount,
+                'Hairball',
+                'Hairballs',
+              )}
             </span>
             <span
               className={`today-stat${todaySummary.triedCount === 0 ? ' zero' : ''}`}

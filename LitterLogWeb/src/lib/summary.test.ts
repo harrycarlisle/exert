@@ -25,7 +25,7 @@ function event(
 }
 
 describe('summary language', () => {
-  it('handles singular and plural compact stats', () => {
+  it('handles singular and plural compact stats for all event types', () => {
     expect(pluralize(1, 'pee', 'pees')).toBe('1 pee')
     expect(pluralize(3, 'pee', 'pees')).toBe('3 pees')
     expect(formatTodayHeading('Bower')).toBe('Today · Bower')
@@ -36,21 +36,25 @@ describe('summary language', () => {
       formatTodaySummary({
         peeCount: 1,
         pooCount: 1,
+        vomitCount: 1,
+        hairballCount: 1,
         triedCount: 1,
         mostRecentTimestamp: null,
       }),
-    ).toBe('Today: 1 Pee · 1 Poo · 1 Tried')
+    ).toBe('Today: 1 Pee · 1 Poo · 1 Vomit · 1 Hairball · 1 Tried')
     expect(
       formatTodaySummary(
         {
           peeCount: 2,
           pooCount: 1,
+          vomitCount: 0,
+          hairballCount: 3,
           triedCount: 0,
           mostRecentTimestamp: null,
         },
         'Cleo',
       ),
-    ).toBe('Today · Cleo: 2 Pees · 1 Poo · 0 Tried')
+    ).toBe('Today · Cleo: 2 Pees · 1 Poo · 0 Vomits · 3 Hairballs · 0 Tried')
   })
 
   it('uses calendar day boundaries and selected animal', () => {
@@ -78,6 +82,17 @@ describe('summary language', () => {
       }),
       event({
         animalId: 'cleo',
+        type: 'vomit',
+        note: 'Grass',
+        timestamp: new Date(2026, 7, 4, 13).toISOString(),
+      }),
+      event({
+        animalId: 'cleo',
+        type: 'hairball',
+        timestamp: new Date(2026, 7, 4, 16).toISOString(),
+      }),
+      event({
+        animalId: 'cleo',
         type: 'pee',
         timestamp: new Date(2026, 7, 3, 12).toISOString(),
       }),
@@ -85,6 +100,8 @@ describe('summary language', () => {
     const cleoSummary = calculateTodaySummary(events, now, 'cleo')
     expect(cleoSummary.peeCount).toBe(2)
     expect(cleoSummary.pooCount).toBe(0)
+    expect(cleoSummary.vomitCount).toBe(1)
+    expect(cleoSummary.hairballCount).toBe(1)
     expect(cleoSummary.triedCount).toBe(1)
     const bowerSummary = calculateTodaySummary(events, now, 'bower')
     expect(bowerSummary.pooCount).toBe(1)

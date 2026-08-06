@@ -17,12 +17,13 @@ import {
   UNASSIGNED_ANIMAL_ID,
   type Animal,
   type AppSettings,
+  ALL_EVENT_TYPES,
   type BathroomEvent,
   type BathroomEventType,
   type LitterLogBackup,
 } from '../models/types'
 
-const EVENT_TYPES: BathroomEventType[] = ['pee', 'poo', 'triedToPee']
+const EVENT_TYPES: BathroomEventType[] = [...ALL_EVENT_TYPES]
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)

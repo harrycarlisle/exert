@@ -69,12 +69,24 @@ export interface StatusBanner {
   message: string
   undoId?: string
   retryType?: BathroomEventType
+  retryNote?: string | null
   retryLoad?: boolean
 }
 
-function loggedMessage(type: BathroomEventType, animalName: string): string {
+export function loggedMessage(
+  type: BathroomEventType,
+  animalName: string,
+  note?: string | null,
+): string {
   if (type === 'pee') return `Pee logged for ${animalName}`
   if (type === 'poo') return `Poo logged for ${animalName}`
+  if (type === 'hairball') return `Hairball logged for ${animalName}`
+  if (type === 'vomit') {
+    const detail = note?.trim()
+    return detail
+      ? `Vomit logged for ${animalName} · ${detail}`
+      : `Vomit logged for ${animalName}`
+  }
   return `Tried to pee logged for ${animalName}`
 }
 
@@ -167,7 +179,7 @@ export function useLitterLog() {
   )
 
   const log = useCallback(
-    async (type: BathroomEventType) => {
+    async (type: BathroomEventType, note: string | null = null) => {
       const animalId = settings.selectedAnimalId
       if (!animalId) {
         const message = 'Select an animal before logging.'
@@ -180,6 +192,7 @@ export function useLitterLog() {
       }
       playImpactHaptic(settings.hapticsEnabled)
 
+      const trimmedNote = note?.trim() ? note.trim() : null
       const animalName = resolveAnimalName(animals, animalId, 'animal')
       const now = new Date()
       const event: BathroomEvent = {
@@ -188,7 +201,7 @@ export function useLitterLog() {
         type,
         timestamp: toISO(now),
         createdAt: toISO(now),
-        note: null,
+        note: trimmedNote,
         source: 'web-app',
         schemaVersion: CURRENT_EVENT_SCHEMA,
       }
@@ -197,7 +210,7 @@ export function useLitterLog() {
         await putEvent(event)
         const nextEvents = [event, ...events]
         setEvents(nextEvents)
-        const message = loggedMessage(type, animalName)
+        const message = loggedMessage(type, animalName, trimmedNote)
         setStatus({ kind: 'success', message, undoId: event.id })
         setAnnounce(message)
         playSuccessHaptic(settings.hapticsEnabled)
@@ -209,7 +222,12 @@ export function useLitterLog() {
       } catch (error) {
         const message =
           error instanceof StorageError ? error.userMessage : STORAGE_SAVE_ERROR
-        setStatus({ kind: 'error', message, retryType: type })
+        setStatus({
+          kind: 'error',
+          message,
+          retryType: type,
+          retryNote: trimmedNote,
+        })
         setAnnounce(message)
         playErrorHaptic(settings.hapticsEnabled)
         return null

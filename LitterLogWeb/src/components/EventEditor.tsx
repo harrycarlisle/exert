@@ -99,6 +99,7 @@ export function EventEditor({
         <label>
           <span>Event type</span>
           <select
+            aria-label="Event type"
             value={type}
             onChange={(e) => setType(e.target.value as BathroomEventType)}
           >
