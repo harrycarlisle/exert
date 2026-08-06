@@ -1,4 +1,21 @@
-export type BathroomEventType = 'pee' | 'poo' | 'triedToPee'
+export type BathroomEventType =
+  'pee' | 'poo' | 'vomit' | 'hairball' | 'triedToPee'
+
+export const ALL_EVENT_TYPES: BathroomEventType[] = [
+  'pee',
+  'poo',
+  'vomit',
+  'hairball',
+  'triedToPee',
+]
+
+export function isBathroomEventType(
+  value: unknown,
+): value is BathroomEventType {
+  return (
+    typeof value === 'string' && (ALL_EVENT_TYPES as string[]).includes(value)
+  )
+}
 
 export type EventSource = 'web-app'
 
@@ -48,6 +65,8 @@ export interface AppSettings {
 export interface TodaySummary {
   peeCount: number
   pooCount: number
+  vomitCount: number
+  hairballCount: number
   triedCount: number
   mostRecentTimestamp: string | null
 }
@@ -109,6 +128,16 @@ export const EVENT_META: Record<
     label: 'Poo',
     shortLabel: 'Poo',
     description: 'Records that the cat defecated',
+  },
+  vomit: {
+    label: 'Vomit',
+    shortLabel: 'Vomit',
+    description: 'Records that the cat vomited',
+  },
+  hairball: {
+    label: 'Hairball',
+    shortLabel: 'Hairball',
+    description: 'Records that the cat produced a hairball',
   },
   triedToPee: {
     label: 'Tried to Pee',

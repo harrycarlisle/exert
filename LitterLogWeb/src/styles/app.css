@@ -13,6 +13,11 @@
   --pee-fg: #3f2e0c;
   --poo: #8c5c38;
   --poo-fg: #ffffff;
+  /* Grass green / warm tan — white or dark text measured ≥ 4.5:1. */
+  --vomit: #3f6b3c;
+  --vomit-fg: #ffffff;
+  --hairball: #c4894a;
+  --hairball-fg: #2a1a08;
   --tried: #db6159;
   --tried-fg: #ffffff;
   --danger: #b3261e;
@@ -52,6 +57,10 @@ html[data-theme='dark'] {
   --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   --pee: #e0b43a;
   --pee-fg: #2d2208;
+  --vomit: #4f7f4b;
+  --vomit-fg: #ffffff;
+  --hairball: #d09555;
+  --hairball-fg: #2a1a08;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -68,6 +77,10 @@ html[data-theme='dark'] {
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     --pee: #e0b43a;
     --pee-fg: #2d2208;
+    --vomit: #4f7f4b;
+    --vomit-fg: #ffffff;
+    --hairball: #d09555;
+    --hairball-fg: #2a1a08;
   }
 }
 
@@ -312,6 +325,14 @@ a {
   width: 100%;
 }
 
+.logging-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 300px;
+}
+
 .log-btn {
   border-radius: 28px;
   width: min(40vw, 136px);
@@ -329,6 +350,15 @@ a {
   box-shadow: none;
   transition: transform 120ms ease;
   -webkit-tap-highlight-color: transparent;
+}
+
+.logging-grid .log-btn {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  min-width: 0;
+  min-height: 104px;
+  font-size: 0.95rem;
 }
 
 .log-btn.tried {
@@ -379,6 +409,16 @@ a {
 .log-btn.poo {
   background: var(--poo);
   color: var(--poo-fg);
+}
+
+.log-btn.vomit {
+  background: var(--vomit);
+  color: var(--vomit-fg);
+}
+
+.log-btn.hairball {
+  background: var(--hairball);
+  color: var(--hairball-fg);
 }
 
 .log-btn.tried {
@@ -433,6 +473,24 @@ a {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
+}
+
+@media (max-width: 360px) {
+  .today-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .today-stat {
+    justify-content: center;
+    padding: 0 6px;
+    font-size: 0.82rem;
+  }
+
+  .logging-grid .log-btn {
+    min-height: 96px;
+    font-size: 0.88rem;
+  }
 }
 
 .today-stat {
@@ -562,6 +620,16 @@ a {
 .event-icon.poo {
   background: var(--poo);
   color: var(--poo-fg);
+}
+
+.event-icon.vomit {
+  background: var(--vomit);
+  color: var(--vomit-fg);
+}
+
+.event-icon.hairball {
+  background: var(--hairball);
+  color: var(--hairball-fg);
 }
 
 .event-icon.triedToPee {
@@ -748,6 +816,61 @@ a {
 
 .btn-row > * {
   flex: 1;
+}
+
+.vomit-popover-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+}
+
+.vomit-popover-layer.sheet {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 calc(12px + var(--safe-right)) calc(12px + var(--safe-bottom))
+    calc(12px + var(--safe-left));
+}
+
+.vomit-popover-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(10, 12, 11, 0.35);
+}
+
+.vomit-popover {
+  pointer-events: auto;
+  position: fixed;
+  z-index: 46;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+
+.vomit-popover.sheet {
+  position: relative;
+  width: min(100%, 420px);
+  margin-bottom: 0;
+}
+
+.vomit-popover-title {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+}
+
+.vomit-popover-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.vomit-popover-custom {
+  display: grid;
+  gap: 10px;
 }
 
 .toast-layer {

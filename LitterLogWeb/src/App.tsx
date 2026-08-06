@@ -209,7 +209,7 @@ export default function App() {
         <StatusBanner
           status={state.status}
           onUndo={() => void state.undo()}
-          onRetry={(type) => void state.log(type)}
+          onRetry={(type, note) => void state.log(type, note)}
           onRetryLoad={() => void state.retryStorage()}
           onDismiss={() => state.setStatus(null)}
         />

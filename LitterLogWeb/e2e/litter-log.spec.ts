@@ -88,6 +88,19 @@ test('log, undo, edit, persist across animals', async ({ page }) => {
 
   await page.getByRole('radio', { name: 'Cleo' }).click()
 
+  await expect(page.locator('.logging-grid')).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Pee', exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Poo', exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Vomit', exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Hairball', exact: true }),
+  ).toBeVisible()
   await expect(
     page.getByRole('button', { name: 'Tried to Pee', exact: true }),
   ).toHaveCount(0)
@@ -110,6 +123,25 @@ test('log, undo, edit, persist across animals', async ({ page }) => {
   await expect(page.getByTestId('status-toast')).toContainText('Entry undone')
   await expect(page.getByRole('heading', { name: 'Recent' })).toHaveCount(0)
   await expect(page.getByTestId('today-stats')).toContainText('0 Pees')
+
+  await page.getByRole('button', { name: 'Hairball', exact: true }).click()
+  await expect(page.getByTestId('status-toast')).toContainText(
+    /Hairball logged for Cleo/i,
+  )
+  await expect(page.getByTestId('today-stats')).toContainText('1 Hairball')
+  await expect(page.locator('.event-row').getByText('Hairball')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Vomit', exact: true }).click()
+  const vomitPopover = page.getByTestId('vomit-detail-popover')
+  await expect(vomitPopover).toBeVisible()
+  await expect(page.getByTestId('status-toast')).toHaveCount(0)
+  await vomitPopover.getByRole('button', { name: 'Grass' }).click()
+  await expect(page.getByTestId('status-toast')).toContainText(
+    /Vomit logged for Cleo · Grass/i,
+  )
+  await expect(page.getByTestId('today-stats')).toContainText('1 Vomit')
+  await expect(page.locator('.event-row').getByText('Vomit')).toBeVisible()
+  await expect(page.locator('.event-row').getByText('Grass')).toBeVisible()
 
   await page.getByRole('radio', { name: 'Bower' }).click()
   await expect(page.getByRole('radio', { name: 'Bower' })).toHaveAttribute(
@@ -137,7 +169,13 @@ test('log, undo, edit, persist across animals', async ({ page }) => {
   await page.getByRole('button', { name: 'History', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'History' })).toBeVisible()
   await page.getByRole('button', { name: 'All animals', exact: true }).click()
-  await expect(page.locator('.event-row')).toHaveCount(2)
+  await expect(page.locator('.event-row')).toHaveCount(4)
+  await expect(
+    page.getByRole('button', { name: 'Vomit', exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Hairball', exact: true }),
+  ).toBeVisible()
 
   await page.getByRole('button', { name: 'Bower', exact: true }).first().click()
   await expect(page.locator('.event-row')).toHaveCount(1)
@@ -192,11 +230,16 @@ test('logging controls and animal selector fit without scroll on narrow phone', 
   await expect(
     page.getByRole('button', { name: 'Add animal' }),
   ).toBeInViewport()
+  await expect(page.locator('.logging-grid')).toBeVisible()
   const pee = page.getByRole('button', { name: 'Pee', exact: true })
   const poo = page.getByRole('button', { name: 'Poo', exact: true })
+  const vomit = page.getByRole('button', { name: 'Vomit', exact: true })
+  const hairball = page.getByRole('button', { name: 'Hairball', exact: true })
   const more = page.getByRole('button', { name: 'More logging options' })
   await expect(pee).toBeInViewport()
   await expect(poo).toBeInViewport()
+  await expect(vomit).toBeInViewport()
+  await expect(hairball).toBeInViewport()
   await expect(more).toBeInViewport()
   await expect(page.getByText('Today · Cleo')).toBeInViewport()
   await expect(page.getByTestId('today-stats')).toBeInViewport()

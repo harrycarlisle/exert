@@ -117,10 +117,13 @@ describe('final UI polish', () => {
     setTimeoutSpy.mockRestore()
   })
 
-  it('keeps Pee/Poo permanent and collapses Tried to Pee behind disclosure', async () => {
+  it('keeps main logging in a 2×2 grid and Tried to Pee behind disclosure', async () => {
     await readyHome()
+    expect(document.querySelector('.logging-grid')).toBeTruthy()
     expect(screen.getByRole('button', { name: /^Pee$/ })).toBeVisible()
     expect(screen.getByRole('button', { name: /^Poo$/ })).toBeVisible()
+    expect(screen.getByRole('button', { name: /^Vomit$/ })).toBeVisible()
+    expect(screen.getByRole('button', { name: /^Hairball$/ })).toBeVisible()
     expect(screen.queryByRole('button', { name: /^Tried to Pee$/ })).toBeNull()
 
     const disclosure = screen.getByRole('button', {

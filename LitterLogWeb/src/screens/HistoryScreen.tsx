@@ -165,6 +165,8 @@ export function HistoryScreen({ state, onDeleteRequest }: Props) {
             ['all', 'All'],
             ['pee', 'Pee'],
             ['poo', 'Poo'],
+            ['vomit', 'Vomit'],
+            ['hairball', 'Hairball'],
             ['triedToPee', 'Tried'],
           ] as const
         ).map(([value, label]) => (

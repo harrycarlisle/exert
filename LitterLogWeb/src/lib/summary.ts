@@ -31,8 +31,14 @@ export function formatTodaySummary(
     : formatTodayHeading(animalName)
   const pee = formatTodayStat(summary.peeCount, 'Pee', 'Pees')
   const poo = formatTodayStat(summary.pooCount, 'Poo', 'Poos')
+  const vomit = formatTodayStat(summary.vomitCount, 'Vomit', 'Vomits')
+  const hairball = formatTodayStat(
+    summary.hairballCount,
+    'Hairball',
+    'Hairballs',
+  )
   const tried = formatTodayStat(summary.triedCount, 'Tried', 'Tried')
-  return `${heading}: ${pee} · ${poo} · ${tried}`
+  return `${heading}: ${pee} · ${poo} · ${vomit} · ${hairball} · ${tried}`
 }
 
 export function calculateTodaySummary(
@@ -42,6 +48,8 @@ export function calculateTodaySummary(
 ): TodaySummary {
   let peeCount = 0
   let pooCount = 0
+  let vomitCount = 0
+  let hairballCount = 0
   let triedCount = 0
   let mostRecentTimestamp: string | null = null
   let mostRecentMs = -1
@@ -52,6 +60,8 @@ export function calculateTodaySummary(
     if (!isSameLocalDay(date, now)) continue
     if (event.type === 'pee') peeCount += 1
     if (event.type === 'poo') pooCount += 1
+    if (event.type === 'vomit') vomitCount += 1
+    if (event.type === 'hairball') hairballCount += 1
     if (event.type === 'triedToPee') triedCount += 1
     const ms = date.getTime()
     if (ms > mostRecentMs) {
@@ -60,5 +70,12 @@ export function calculateTodaySummary(
     }
   }
 
-  return { peeCount, pooCount, triedCount, mostRecentTimestamp }
+  return {
+    peeCount,
+    pooCount,
+    vomitCount,
+    hairballCount,
+    triedCount,
+    mostRecentTimestamp,
+  }
 }
